@@ -6,8 +6,8 @@
 <title>CBA 篮球1v1</title>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
-#gc{position:absolute;top:0;left:0;width:100%;height:100%}
+html,body{width:100vw;height:100vh;overflow:hidden;background:#000;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
+#gc{position:fixed;top:0;left:0;width:100vw;height:100vh}
 #hud{position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;align-items:center;background:rgba(0,0,0,0.55);border-radius:20px;padding:6px 22px;z-index:10;pointer-events:none}
 .hud-side{display:flex;align-items:center;gap:8px}
 .hud-name{font-size:13px;font-weight:700;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis}
@@ -430,6 +430,8 @@ function GameEngine(canvas, ctx, w, h, opts) {
   // Scoring mode: 'alternate' (换发) or 'keep' (连发)
   this.scoringMode = (opts && opts.scoringMode) ? opts.scoringMode : 'alternate'
   this._rimStuckCounter = 0
+  this._needClearLine = false
+  this._bgImg = null; try { this._bgImg = new Image(); this._bgImg.src = 'bg.jpg' } catch(e) {}
   this._commentary = []
   this._impact = 0
   this._jumpBallPhase = 'countdown' // countdown | toss | contest | done
@@ -959,6 +961,11 @@ GameEngine.prototype.setDefMove = function(mx, my) { this.defInput.mx = mx || 0;
 // ==================== ACTIONS ====================
 GameEngine.prototype.startShoot = function() {
   if (!this.ball.has || this.shooting || this.ballInAir || this.driveAnim > 0) return
+  // 3-point line clearing rule after rebound
+  if (this._needClearLine) {
+    if (this.off.x > this._s(RIM_X - 290)) { this._say('需先出三分线！'); return }
+    this._needClearLine = false
+  }
   this.shooting = true; this.shotReleased = false; this._chargePower = 0; this.shotPower = 0
   this._isDunkLayup = false; this._fadeaway = false
 
@@ -1553,7 +1560,8 @@ GameEngine.prototype._doRebound = function(who) {
   this.poss = who; this.shotClockTimer = 0; this.shotResult = null
   this._spawnParticles(this.ball.x, this.ball.y, '#00ff88', 12)
   var pname = who === 0 ? (this.p1 ? this.p1.name : 'P1') : (this.p2 ? this.p2.name : 'P2')
-  this._say(pname + ' 抢到篮板！')
+  this._say(pname + ' 抢到篮板！需出三分线')
+  this._needClearLine = true
   var o = this.poss === 0 ? this.p1 : this.p2
   var d = this.poss === 0 ? this.p2 : this.p1
   this._offSp = 2.5 * (0.6 + (o ? o.speed / 99 : 0.5) * 0.8)
@@ -1580,17 +1588,19 @@ GameEngine.prototype.render = function() {
   ctx.save()
   ctx.translate(shakeX, shakeY)
 
-  // Dynamic team background
-  var offP = this.poss === 0 ? this.p1 : this.p2
-  var bgTc = offP ? (offP.teamColor || '#1a6dd4') : '#1a6dd4'
-  var bgGrad = ctx.createLinearGradient(0, 0, 0, h)
-  bgGrad.addColorStop(0, darken(bgTc, 0.85))
-  bgGrad.addColorStop(0.7, darken(bgTc, 0.6))
-  bgGrad.addColorStop(1, darken(bgTc, 0.2))
-  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h)
-  // Jersey pattern
-  ctx.fillStyle = 'rgba(255,255,255,0.02)'
-  for (var si = 0; si < w; si += this._s(40)) { ctx.fillRect(si, 0, this._s(20), h) }
+  // Background: Guo Ailun photo or team color
+  if (this._bgImg && this._bgImg.complete && this._bgImg.naturalWidth > 0) {
+    ctx.drawImage(this._bgImg, 0, 0, w, h)
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 0, w, h)
+  } else {
+    var offP = this.poss === 0 ? this.p1 : this.p2
+    var bgTc = offP ? (offP.teamColor || '#1a6dd4') : '#1a6dd4'
+    var bgGrad = ctx.createLinearGradient(0, 0, 0, h)
+    bgGrad.addColorStop(0, darken(bgTc, 0.85))
+    bgGrad.addColorStop(0.7, darken(bgTc, 0.6))
+    bgGrad.addColorStop(1, darken(bgTc, 0.2))
+    ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h)
+  }
 
   this._drawCourt(ctx)
   if (this._jumpBallPhase !== 'done') this._drawReferee(ctx)
