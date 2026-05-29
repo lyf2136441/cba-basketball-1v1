@@ -324,3 +324,15 @@ document.addEventListener('touchmove', function(e) {
 initCanvas();
 showScreen('setupOverlay');
 updateModeUI();
+
+// Initialize audio on first user interaction
+document.addEventListener('touchstart', function initAudio() {
+  if (engine && engine._audioCtx && engine._audioCtx.state === 'suspended') {
+    engine._audioCtx.resume()
+  }
+}, { once: true })
+document.addEventListener('mousedown', function initAudioM() {
+  if (engine && engine._audioCtx && engine._audioCtx.state === 'suspended') {
+    engine._audioCtx.resume()
+  }
+}, { once: true })
