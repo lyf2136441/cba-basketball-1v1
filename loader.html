@@ -16,6 +16,7 @@ p{font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:24px}
 <div class="err" id="err">加载失败，请检查网络后重试</div>
 <button class="btn" id="retry" onclick="location.reload()">重新加载</button>
 <script>
+try{
 var bar=document.getElementById('bar'),pct=document.getElementById('pct'),sub=document.getElementById('sub'),err=document.getElementById('err'),retry=document.getElementById('retry'),fakeP=0,realP=0,done=false;
 var tips=['正在准备球场...','球员正在热身...','裁判就位...','即将开始！'];
 var timer=setInterval(function(){if(done)return;if(fakeP<90)fakeP+=Math.random()*3+1;var s=Math.min(fakeP,realP);bar.style.width=s+'%';pct.textContent=Math.floor(s)+'%';sub.textContent=tips[Math.min(3,Math.floor(s/25))]},200);
@@ -23,10 +24,20 @@ var x=new XMLHttpRequest();
 x.open('GET','game.html');
 x.onprogress=function(e){if(e.lengthComputable)realP=e.loaded/e.total*100};
 x.onload=function(){
-  if(x.status===200){done=true;clearInterval(timer);bar.style.width='100%';pct.textContent='100%';sub.textContent='加载完成！';
-    setTimeout(function(){document.open();document.write(x.responseText);document.close()},300)}
-  else{clearInterval(timer);err.style.display='block';retry.style.display='block'}
+  if(x.status===200){
+    done=true;clearInterval(timer);bar.style.width='100%';pct.textContent='100%';sub.textContent='加载完成！';
+    try{
+      // Use Blob URL to avoid document.write restrictions
+      var blob=new Blob([x.responseText],{type:'text/html'});
+      var url=URL.createObjectURL(blob);
+      setTimeout(function(){window.location.replace(url)},200);
+    }catch(e2){
+      // Fallback to document.write
+      setTimeout(function(){document.open();document.write(x.responseText);document.close()},200);
+    }
+  }else{clearInterval(timer);err.style.display='block';retry.style.display='block'}
 };
 x.onerror=function(){clearInterval(timer);err.style.display='block';retry.style.display='block'};
 x.send();
+}catch(e){document.getElementById('err').style.display='block';document.getElementById('err').textContent='初始化失败: '+e.message}
 </script></body></html>
