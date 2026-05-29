@@ -109,12 +109,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
   <span class="ov-title">选择球员</span>
   <span class="ov-label">游戏模式</span>
   <div class="mode-opts" id="modeSelect">
-    <div class="mode-btn on" data-mode="ai" id="modeAI">🤖 单人</div>
+    <div class="mode-btn on" data-mode="ai" id="modeAI">🏀 单挑</div>
+    <div class="mode-btn" data-mode="3pt" id="mode3pt">🎯 三分</div>
     <div class="mode-btn" data-mode="local" id="modeLocal">👥 双人</div>
     <div class="mode-btn" data-mode="online" id="modeOnline">🌐 联机</div>
   </div>
   <span class="ov-label">进攻方球队</span>
-  <div class="team-tabs" id="teamTabs1"></div>
 <script>
 // CBA 2024-2025赛季 全部20支球队球员数据
 var CBA_TEAMS = [
@@ -2525,15 +2525,17 @@ setTimeout(function() {
 }, 200);
 
 // ============ GAME MODE SELECTION ============
-gameState.gameMode = 'ai'; // ai | local | online
-$('modeAI').addEventListener('click', function() { gameState.gameMode = 'ai'; updateModeTabs(); });
-$('modeLocal').addEventListener('click', function() { gameState.gameMode = 'local'; updateModeTabs(); });
-$('modeOnline').addEventListener('click', function() { gameState.gameMode = 'online'; updateModeTabs(); });
-function updateModeTabs() {
-  var m = gameState.gameMode;
-  $('modeAI').classList.toggle('on', m === 'ai');
-  $('modeLocal').classList.toggle('on', m === 'local');
-  $('modeOnline').classList.toggle('on', m === 'online');
+gameState.gameMode = 'ai';
+$('modeAI').addEventListener('click', function(){gameState.gameMode='ai';updateModeTabs()});
+$('modeLocal').addEventListener('click', function(){gameState.gameMode='local';updateModeTabs()});
+$('modeOnline').addEventListener('click', function(){gameState.gameMode='online';updateModeTabs()});
+$('mode3pt').addEventListener('click', function(){gameState.gameMode='3pt';updateModeTabs()});
+function updateModeTabs(){
+  var m=gameState.gameMode;
+  $('modeAI').classList.toggle('on',m==='ai');
+  $('modeLocal').classList.toggle('on',m==='local');
+  $('modeOnline').classList.toggle('on',m==='online');
+  $('mode3pt').classList.toggle('on',m==='3pt');
 }
 
 // ============ SCORING MODE ============
@@ -2565,6 +2567,11 @@ for (var i = 0; i < timeBtns.length; i++) {
 function startGame() {
   if (!selP1 || !selP2) { alert('请先选择球员'); return; }
   p1 = selP1; p2 = selP2;
+
+  if (gameState.gameMode === '3pt') {
+    start3PTContest();
+    return;
+  }
 
   if (gameState.gameMode === 'online') {
     // Online mode - try WebSocket connection
@@ -2602,6 +2609,100 @@ function startGame() {
   if (gameLoop) cancelAnimationFrame(gameLoop);
   gameLoop = requestAnimationFrame(tick);
 }
+
+// ============ 3-POINT CONTEST ============
+var pt3State = {phase:'p1', shots:0, p1Score:0, p2Score:0, shooting:false}
+
+function start3PTContest() {
+  showScreen(null);
+  gameState.started = true;
+  pt3State = {phase:'p1', shots:0, p1Score:0, p2Score:0, shooting:false};
+  engine = new GameEngine(canvas, ctx, window.innerWidth, window.innerHeight, {gameDuration:120, scoringMode:'alternate'});
+  engine.setPlayers(p1, p2);
+  engine._jumpBallPhase = 'done';
+  // Position offense at 3pt line
+  engine.off.x = engine._s(RIM_X - 300);
+  engine.off.y = engine._s(FLOOR_Y - 20);
+  engine.def.x = engine._s(RIM_X - 50);
+  engine.def.y = engine._s(FLOOR_Y - 20);
+  engine.ball.has = true;
+  engine.poss = 0;
+
+  $('p1name').textContent = p1.name; $('p1name').style.color = p1.teamColor;
+  $('p2name').textContent = p2.name; $('p2name').style.color = p2.teamColor;
+  $('score0').textContent = '0'; $('score1').textContent = '0';
+  $('gameTimer').textContent = (pt3State.phase==='p1'?p2.name:p1.name)+':0/'+(pt3State.shots);
+
+  lastFrame = performance.now();
+  if (gameLoop) cancelAnimationFrame(gameLoop);
+  gameLoop = requestAnimationFrame(tick3PT);
+}
+
+function tick3PT(now) {
+  if (!engine || !gameState.started) { gameLoop=requestAnimationFrame(tick3PT); return; }
+  try {
+    var dt = now - lastFrame; lastFrame = now;
+    if (dt > 50) dt = 33;
+    engine._move(dt);
+    engine.render();
+    syncUI3PT();
+    if (engine.gameOver && !engine._uiEnded) { engine._uiEnded=true; showGameOver(); }
+  } catch(e) { console.error(e); }
+  gameLoop = requestAnimationFrame(tick3PT);
+}
+
+function syncUI3PT() {
+  $('score0').textContent = pt3State.p1Score;
+  $('score1').textContent = pt3State.p2Score;
+  $('shotClock').textContent = (5-pt3State.shots)+'球';
+  $('gameTimer').textContent = (pt3State.phase==='p1'?p1.name:p2.name)+' '+(pt3State.shots)+'/5';
+}
+
+function shoot3PT() {
+  if (!engine || pt3State.shooting) return;
+  pt3State.shooting = true;
+  engine.startShoot();
+  setTimeout(function() {
+    if (!engine) return;
+    engine.releaseShoot();
+    pt3State.shots++;
+    pt3State.shooting = false;
+    // Check if made (simplified: use shot result)
+    setTimeout(function() {
+      if (!engine || !engine.shotResult) return;
+      var made = engine.shotResult.made;
+      if (pt3State.phase === 'p1') { if (made) pt3State.p1Score += 3; }
+      else { if (made) pt3State.p2Score += 3; }
+      // Reset ball
+      engine.ball.has = true; engine.ballInAir = false; engine.ballLoose = false;
+      engine.shotResult = null; engine.shotReleased = false; engine.shooting = false;
+      engine.ball.x = engine.off.x + engine.off.r;
+      engine.ball.y = engine.off.y - engine.off.r * 1.2;
+      engine.shotClockTimer = 0;
+
+      if (pt3State.shots >= 5) {
+        if (pt3State.phase === 'p1') {
+          pt3State.phase = 'p2'; pt3State.shots = 0;
+          engine.poss = 1;
+          engine.off.x = engine._s(RIM_X - 300);
+          engine._resetPos();
+          engine.poss = 1;
+        } else {
+          // Contest over
+          engine.gameOver = true;
+          engine.winner = pt3State.p1Score > pt3State.p2Score ? 0 : (pt3State.p2Score > pt3State.p1Score ? 1 : -1);
+          engine.score = [pt3State.p1Score, pt3State.p2Score];
+          engine.stats = {p1:{pts:pt3State.p1Score,blk:0,stl:0,reb:0}, p2:{pts:pt3State.p2Score,blk:0,stl:0,reb:0}};
+          showGameOver();
+        }
+      }
+    }, 800);
+  }, 300 + Math.random() * 200);
+}
+
+// Add 3pt shoot button handler
+var btn3PT = document.getElementById('btn3PT');
+if (btn3PT) { btn3PT.addEventListener('touchstart', function(e) { e.preventDefault(); if (gameState.gameMode==='3pt') shoot3PT(); }); btn3PT.addEventListener('mousedown', function(e) { e.preventDefault(); if (gameState.gameMode==='3pt') shoot3PT(); }); }
 
 function formatTime(sec) {
   var m = Math.floor(sec / 60), s = Math.floor(sec % 60);
