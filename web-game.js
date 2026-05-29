@@ -79,6 +79,8 @@ function GameEngine(canvas, ctx, w, h, opts) {
   // Scoring mode: 'alternate' (换发) or 'keep' (连发)
   this.scoringMode = (opts && opts.scoringMode) ? opts.scoringMode : 'alternate'
   this._rimStuckCounter = 0
+  this._needClearLine = false
+  this._bgImg = null; try { this._bgImg = new Image(); this._bgImg.src = 'bg.jpg' } catch(e) {}
   this._commentary = []
   this._impact = 0
   this._jumpBallPhase = 'countdown' // countdown | toss | contest | done
@@ -168,7 +170,8 @@ GameEngine.prototype._playerVisuals = function(p) {
   var str = p.strength || 50
   var build = 0.82 + (str / 99) * 0.36
 
-  // Skin tone from name hash + position
+  // Skin tone from name hash
+  var nameSeed = 0; var nm = p.name || ''; for (var ni = 0; ni < nm.length; ni++) nameSeed += nm.charCodeAt(ni)
   var skin = (nameSeed % 7) // 0-6: different skin tones
 
   // Hair style from num
@@ -607,6 +610,11 @@ GameEngine.prototype.setDefMove = function(mx, my) { this.defInput.mx = mx || 0;
 // ==================== ACTIONS ====================
 GameEngine.prototype.startShoot = function() {
   if (!this.ball.has || this.shooting || this.ballInAir || this.driveAnim > 0) return
+  // 3-point line clearing rule after rebound
+  if (this._needClearLine) {
+    if (this.off.x > this._s(RIM_X - 290)) { this._say('需先出三分线！'); return }
+    this._needClearLine = false
+  }
   this.shooting = true; this.shotReleased = false; this._chargePower = 0; this.shotPower = 0
   this._isDunkLayup = false; this._fadeaway = false
 
@@ -1201,7 +1209,8 @@ GameEngine.prototype._doRebound = function(who) {
   this.poss = who; this.shotClockTimer = 0; this.shotResult = null
   this._spawnParticles(this.ball.x, this.ball.y, '#00ff88', 12)
   var pname = who === 0 ? (this.p1 ? this.p1.name : 'P1') : (this.p2 ? this.p2.name : 'P2')
-  this._say(pname + ' 抢到篮板！')
+  this._say(pname + ' 抢到篮板！需出三分线')
+  this._needClearLine = true
   var o = this.poss === 0 ? this.p1 : this.p2
   var d = this.poss === 0 ? this.p2 : this.p1
   this._offSp = 2.5 * (0.6 + (o ? o.speed / 99 : 0.5) * 0.8)
@@ -1228,17 +1237,19 @@ GameEngine.prototype.render = function() {
   ctx.save()
   ctx.translate(shakeX, shakeY)
 
-  // Dynamic team background
-  var offP = this.poss === 0 ? this.p1 : this.p2
-  var bgTc = offP ? (offP.teamColor || '#1a6dd4') : '#1a6dd4'
-  var bgGrad = ctx.createLinearGradient(0, 0, 0, h)
-  bgGrad.addColorStop(0, darken(bgTc, 0.85))
-  bgGrad.addColorStop(0.7, darken(bgTc, 0.6))
-  bgGrad.addColorStop(1, darken(bgTc, 0.2))
-  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h)
-  // Jersey pattern
-  ctx.fillStyle = 'rgba(255,255,255,0.02)'
-  for (var si = 0; si < w; si += this._s(40)) { ctx.fillRect(si, 0, this._s(20), h) }
+  // Background: Guo Ailun photo or team color
+  if (this._bgImg && this._bgImg.complete && this._bgImg.naturalWidth > 0) {
+    ctx.drawImage(this._bgImg, 0, 0, w, h)
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 0, w, h)
+  } else {
+    var offP = this.poss === 0 ? this.p1 : this.p2
+    var bgTc = offP ? (offP.teamColor || '#1a6dd4') : '#1a6dd4'
+    var bgGrad = ctx.createLinearGradient(0, 0, 0, h)
+    bgGrad.addColorStop(0, darken(bgTc, 0.85))
+    bgGrad.addColorStop(0.7, darken(bgTc, 0.6))
+    bgGrad.addColorStop(1, darken(bgTc, 0.2))
+    ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h)
+  }
 
   this._drawCourt(ctx)
   if (this._jumpBallPhase !== 'done') this._drawReferee(ctx)
@@ -2089,3 +2100,37 @@ GameEngine.prototype._drawUI = function(ctx) {
   ctx.fillRect(this._s(8), sbY, sbW * sc2, sbH)
 }
 
+
+// ============ SOUND SYSTEM ============
+GameEngine.prototype._initSound = function() {
+  try { this._audioCtx = new (window.AudioContext || window.webkitAudioContext)() } catch(e) { this._audioCtx = null }
+}
+GameEngine.prototype._playBeep = function(freq, dur, type, vol) {
+  if (!this._audioCtx) return
+  try {
+    var ctx = this._audioCtx, o = ctx.createOscillator(), g = ctx.createGain()
+    o.type = type || 'sine'; o.frequency.value = freq || 440
+    g.gain.setValueAtTime(vol || 0.15, ctx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
+    o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + dur)
+  } catch(e) {}
+}
+GameEngine.prototype._sfx = function(name) {
+  if (!this._audioCtx) return
+  try {
+    if (name === 'swish') { this._playBeep(800, 0.25, 'sine', 0.12) }
+    else if (name === 'bounce') { this._playBeep(200, 0.15, 'triangle', 0.1) }
+    else if (name === 'buzzer') { this._playBeep(220, 0.5, 'square', 0.1) }
+    else if (name === 'block') { this._playBeep(100, 0.3, 'sawtooth', 0.12) }
+    else if (name === 'steal') { this._playBeep(600, 0.15, 'square', 0.08) }
+    else if (name === 'score') { this._playBeep(523, 0.15, 'sine', 0.1); setTimeout(this._playBeep.bind(this, 659, 0.12, 'sine', 0.1), 100); setTimeout(this._playBeep.bind(this, 784, 0.2, 'sine', 0.12), 200) }
+    else if (name === 'crowd') { for (var i = 0; i < 5; i++) { var f = 200 + Math.random() * 300; setTimeout(this._playBeep.bind(this, f, 0.2, 'triangle', 0.03), i * 50) } }
+  } catch(e) {}
+}
+
+// Add sound init to constructor
+var _origInit2 = GameEngine.prototype._init
+GameEngine.prototype._init = function() {
+  _origInit2.call(this)
+  this._initSound()
+}
