@@ -1,0 +1,32 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>CBA 篮球1v1</title><style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a14;font-family:'PingFang SC','Microsoft YaHei',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.bounce{font-size:60px;animation:b 0.6s infinite alternate}
+@keyframes b{from{transform:translateY(0)}to{transform:translateY(-15px)}}
+h1{font-size:26px;font-weight:900;color:#ffd700;margin:10px 0 6px}
+p{font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:24px}
+.bar-bg{width:240px;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-bottom:10px}
+.bar{width:0;height:100%;background:linear-gradient(90deg,#ff8c00,#ffd700);border-radius:3px;transition:width 0.5s}
+.pct{font-size:13px;color:rgba(255,255,255,0.6)}
+.err{display:none;color:#f44;font-size:14px;margin-top:20px;text-align:center;max-width:280px}
+.btn{display:none;margin-top:16px;padding:12px 40px;background:rgba(255,140,0,0.2);border:2px solid #ff8c00;color:#ffd700;font-size:16px;font-weight:700;border-radius:24px;cursor:pointer}
+</style></head><body>
+<div class="bounce">🏀</div><h1>CBA 篮球1v1</h1><p id="sub">正在准备球场...</p>
+<div class="bar-bg"><div class="bar" id="bar"></div></div><div class="pct" id="pct">0%</div>
+<div class="err" id="err">加载失败，请检查网络后重试</div>
+<button class="btn" id="retry" onclick="location.reload()">重新加载</button>
+<script>
+var bar=document.getElementById('bar'),pct=document.getElementById('pct'),sub=document.getElementById('sub'),err=document.getElementById('err'),retry=document.getElementById('retry'),fakeP=0,realP=0,done=false;
+var tips=['正在准备球场...','球员正在热身...','裁判就位...','即将开始！'];
+var timer=setInterval(function(){if(done)return;if(fakeP<90)fakeP+=Math.random()*3+1;var s=Math.min(fakeP,realP);bar.style.width=s+'%';pct.textContent=Math.floor(s)+'%';sub.textContent=tips[Math.min(3,Math.floor(s/25))]},200);
+var x=new XMLHttpRequest();
+x.open('GET','game.html');
+x.onprogress=function(e){if(e.lengthComputable)realP=e.loaded/e.total*100};
+x.onload=function(){
+  if(x.status===200){done=true;clearInterval(timer);bar.style.width='100%';pct.textContent='100%';sub.textContent='加载完成！';
+    setTimeout(function(){document.open();document.write(x.responseText);document.close()},300)}
+  else{clearInterval(timer);err.style.display='block';retry.style.display='block'}
+};
+x.onerror=function(){clearInterval(timer);err.style.display='block';retry.style.display='block'};
+x.send();
+</script></body></html>
