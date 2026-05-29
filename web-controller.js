@@ -357,19 +357,6 @@ document.addEventListener('touchmove', function(e) {
 }, { passive: false });
 
 // ============ INIT ============
-document.addEventListener('DOMContentLoaded', function() {
-  initCanvas();
-  showScreen('setupOverlay');
-  updateModeUI();
-  var ld = document.getElementById('loading');
-  if (ld) ld.style.display = 'none';
-  console.log('Game initialized successfully');
-});
-// Fallback: if DOM already loaded
-if (document.readyState === 'interactive' || document.readyState === 'complete') {
-  initCanvas();
-  showScreen('setupOverlay');
-  updateModeUI();
-  var ld2 = document.getElementById('loading');
-  if (ld2) ld2.style.display = 'none';
-}
+initCanvas();
+showScreen('setupOverlay');
+updateModeUI();
