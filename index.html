@@ -1,1 +1,146 @@
-<meta http-equiv=\"refresh\" content=\"0;url=game.html\">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>CBA 篮球1v1</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
+#gc{position:absolute;top:0;left:0;width:100%;height:100%}
+#hud{position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;align-items:center;background:rgba(0,0,0,0.55);border-radius:20px;padding:6px 22px;z-index:10;pointer-events:none}
+.hud-side{display:flex;align-items:center;gap:8px}
+.hud-name{font-size:13px;font-weight:700;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis}
+.hud-score{font-size:26px;font-weight:900;color:#fff;min-width:26px;text-align:center}
+.hud-mid{display:flex;flex-direction:column;align-items:center;margin:0 14px}
+.hud-vs{font-size:11px;color:rgba(255,255,255,0.35)}
+.hud-clock{font-size:12px;color:#ff6}
+.hud-timer{font-size:12px;color:#ff9;margin-top:1px}
+
+#meter{position:absolute;left:50%;bottom:200px;transform:translateX(-50%);text-align:center;z-index:10;pointer-events:none;display:none}
+#meter.show{display:block}
+.meter-bg{width:260px;height:16px;background:rgba(0,0,0,0.6);border-radius:8px;overflow:hidden;position:relative;border:2px solid rgba(255,255,255,0.15)}
+.meter-green{position:absolute;top:0;height:100%;background:rgba(0,220,80,0.45);border-radius:8px;z-index:1}
+.meter-fill{position:absolute;top:0;left:0;height:100%;background:linear-gradient(90deg,#ff6a00,#ffaa00);border-radius:8px;z-index:0}
+.meter-mark{position:absolute;top:-3px;width:4px;height:22px;background:#fff;border-radius:2px;transform:translateX(-50%);z-index:2}
+.meter-txt{display:block;font-size:13px;color:#fff;margin-top:5px;font-weight:700}
+
+#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10;background:rgba(0,0,0,0.7);padding:8px 26px;border-radius:16px;pointer-events:none;display:none}
+#msg.show{display:block}
+#msg span{font-size:16px;color:#ff0;font-weight:700}
+
+.joy-area{position:absolute;bottom:44px;left:20px;z-index:20;display:flex;flex-direction:column;align-items:center}
+.joy-base{width:120px;height:120px;background:rgba(255,255,255,0.07);border:3px solid rgba(255,255,255,0.2);border-radius:50%;position:relative}
+.joy-dot{width:46px;height:46px;background:rgba(255,140,0,0.55);border-radius:50%;position:absolute;transform:translate(-50%,-50%);pointer-events:none;transition:none}
+.joy-label{font-size:11px;color:rgba(255,255,255,0.3);margin-top:5px}
+
+.act-area{position:absolute;bottom:44px;right:20px;z-index:20;display:flex;flex-direction:column;align-items:flex-end}
+.act-row{display:flex;margin-top:8px;gap:8px}
+.act-btn{width:82px;height:58px;border-radius:14px;border:2px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.act-btn:active,.act-btn.on{background:rgba(255,140,0,0.3);border-color:#ff8c00}
+.act-btn.big{width:128px;height:74px}
+.act-btn.shoot-btn{background:rgba(255,68,68,0.18);border-color:rgba(255,68,68,0.35)}
+.act-btn.reb-btn{background:rgba(0,255,136,0.18);border-color:rgba(0,255,136,0.35)}
+.ab-ico{font-size:22px;line-height:1}
+.ab-txt{font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px}
+.act-btn.big .ab-ico{font-size:28px}
+.act-btn.big .ab-txt{font-size:14px}
+
+.overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.82);display:flex;align-items:center;justify-content:center;z-index:100}
+.ov-box{width:340px;max-height:88vh;overflow-y:auto;background:#1a1a2e;border-radius:20px;padding:30px 26px;text-align:center;-webkit-overflow-scrolling:touch}
+.ov-title{display:block;font-size:22px;font-weight:900;color:#ffd700;margin-bottom:18px}
+.ov-label{display:block;font-size:13px;color:rgba(255,255,255,0.5);margin:14px 0 8px}
+.ov-score{display:block;font-size:40px;font-weight:900;color:#fff;margin:8px 0 14px}
+.ov-stat{display:block;font-size:14px;color:#aaa;margin:3px 0}
+.ov-btn{display:block;width:100%;height:54px;line-height:54px;background:linear-gradient(135deg,#ff8c00,#ff4444);color:#fff;font-size:18px;font-weight:700;border-radius:27px;border:none;margin-top:16px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ov-btn:active{opacity:0.8}
+.ov-btn2{display:block;width:100%;height:46px;line-height:46px;background:rgba(255,255,255,0.08);color:#ccc;font-size:15px;border-radius:23px;border:none;margin-top:10px;cursor:pointer}
+
+.time-btn{display:block;width:100%;height:52px;line-height:52px;background:rgba(255,140,0,0.12);color:#ffd700;font-size:17px;font-weight:700;border-radius:26px;border:2px solid rgba(255,140,0,0.25);margin:4px 0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.time-btn:active{background:rgba(255,140,0,0.3)}
+
+.mode-opts{display:flex;gap:12px;width:100%}
+.mode-btn{flex:1;height:46px;line-height:46px;text-align:center;border-radius:23px;font-size:15px;font-weight:700;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.12);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mode-btn.on{color:#fff;background:rgba(255,140,0,0.3);border-color:#ff8c00;box-shadow:0 0 12px rgba(255,140,0,0.3)}
+.mode-hint{display:block;font-size:12px;color:rgba(255,255,255,0.35);margin-top:5px}
+
+.player-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:8px 0}
+.player-card{width:90px;padding:10px 4px;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);border-radius:12px;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all 0.1s}
+.player-card.sel{border-color:#ff8c00;background:rgba(255,140,0,0.2)}
+.player-card .p-num{font-size:26px;font-weight:900;display:block}
+.player-card .p-name{font-size:11px;margin-top:3px;display:block;color:#ccc}
+.player-card .p-pos{font-size:10px;color:#888}
+.player-vs{text-align:center;font-size:16px;color:#555;margin:4px 0}
+.team-tabs{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0;max-height:80px;overflow-y:auto}
+.team-tab{font-size:10px;padding:4px 7px;background:rgba(255,255,255,0.05);border-radius:8px;cursor:pointer;white-space:nowrap;color:rgba(255,255,255,0.6)}
+.team-tab.sel{background:rgba(255,140,0,0.2);color:#ffd700}
+
+.hidden{display:none!important}
+#rotatePrompt{display:none}
+</style>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<div id="hud">
+  <div class="hud-side"><span class="hud-name" id="p1name"></span><span class="hud-score" id="score0">0</span></div>
+  <div class="hud-mid"><span class="hud-vs">VS</span><span class="hud-clock" id="shotClock">24s</span><span class="hud-timer" id="gameTimer">2:00</span></div>
+  <div class="hud-side"><span class="hud-score" id="score1">0</span><span class="hud-name" id="p2name"></span></div>
+</div>
+<div id="meter"><div class="meter-bg"><div class="meter-green" id="meterGreen"></div><div class="meter-fill" id="meterFill"></div><div class="meter-mark" id="meterMark"></div></div><span class="meter-txt">松手投篮！</span></div>
+<div id="msg"><span id="msgText"></span></div>
+<div class="joy-area" id="joyArea"><div class="joy-base" id="joyBase"><div class="joy-dot" id="joyDot" style="left:50%;top:50%"></div></div><span class="joy-label">移动</span></div>
+<div class="act-area" id="actArea">
+  <div class="act-btn big shoot-btn" id="btnShoot"><span class="ab-ico">🏀</span><span class="ab-txt" id="btnShootLabel">按住投篮</span></div>
+  <div class="act-btn big reb-btn hidden" id="btnRebound"><span class="ab-ico">🏀</span><span class="ab-txt">捡球</span></div>
+  <div class="act-row">
+    <div class="act-btn" id="btnDrive"><span class="ab-ico">⚡</span><span class="ab-txt">突破</span></div>
+    <div class="act-btn" id="btnSteal"><span class="ab-ico">✋</span><span class="ab-txt">抢断</span></div>
+    <div class="act-btn" id="btnBlock"><span class="ab-ico">🧱</span><span class="ab-txt">盖帽</span></div>
+  </div>
+</div>
+<!-- Rotation prompt -->
+<div class="overlay" id="rotatePrompt"><div class="ov-box">
+  <span class="ov-title" style="font-size:40px">📱↔️</span>
+  <span class="ov-title">请横屏使用</span>
+  <span style="color:#aaa;font-size:14px">将手机横过来体验最佳游戏</span>
+</div></div>
+
+<div class="overlay" id="setupOverlay"><div class="ov-box" id="setupBox">
+  <span class="ov-title">选择球员</span>
+  <span class="ov-label">游戏模式</span>
+  <div class="mode-opts" id="modeSelect">
+    <div class="mode-btn on" data-mode="ai" id="modeAI">🤖 单人</div>
+    <div class="mode-btn" data-mode="local" id="modeLocal">👥 双人</div>
+    <div class="mode-btn" data-mode="online" id="modeOnline">🌐 联机</div>
+  </div>
+  <span class="ov-label">进攻方球队</span>
+  <div class="team-tabs" id="teamTabs1"></div>
+  <div class="player-grid" id="playerGrid"></div>
+  <div class="player-vs">VS</div>
+  <span class="ov-label">防守方球队</span>
+  <div class="team-tabs" id="teamTabs2"></div>
+  <div class="player-grid" id="playerGrid2"></div>
+  <span class="ov-label">比赛时长</span>
+  <button class="time-btn" data-dur="60">1 分钟</button>
+  <button class="time-btn" data-dur="120">2 分钟</button>
+  <button class="time-btn" data-dur="180">3 分钟</button>
+  <button class="time-btn" data-dur="300">5 分钟</button>
+  <input type="number" id="customTime" placeholder="自定义(秒)" min="30" max="600" step="30" style="display:block;width:100%;height:48px;margin:6px 0;border-radius:24px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;text-align:center;font-size:16px;padding:0 16px">
+  <button class="time-btn" data-dur="0" style="background:rgba(0,200,255,0.12);border-color:rgba(0,200,255,0.3);color:#0cf">使用自定义时长</button>
+  <span class="ov-label">发球模式</span>
+  <div class="mode-opts"><div class="mode-btn on" data-mode="alternate" id="modeAlt">换发</div><div class="mode-btn" data-mode="keep" id="modeKeep">连发</div></div>
+  <span class="mode-hint" id="modeHint">进球后交换球权</span>
+</div></div>
+<div class="overlay hidden" id="gameOverOverlay"><div class="ov-box">
+  <span class="ov-title" id="winText"></span>
+  <span class="ov-score" id="finalScore"></span>
+  <span class="ov-stat" id="stat1"></span>
+  <span class="ov-stat" id="stat2"></span>
+  <button class="ov-btn" id="btnRematch">再来一局</button>
+  <button class="ov-btn2" id="btnNewGame">重新选择</button>
+</div></div>
+<script src="players-data.js"></script>
+<script src="web-game.js"></script>
+<script src="web-controller.js"></script>
+</body>
+</html>
