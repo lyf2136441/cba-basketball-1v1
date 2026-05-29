@@ -80,7 +80,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
 </style>
 </head>
 <body>
-<div id="loading" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#ffd700;font-size:20px;z-index:200;font-weight:700;pointer-events:none">加载中...</div>
 <canvas id="gc"></canvas>
 <div id="hud">
   <div class="hud-side"><span class="hud-name" id="p1name"></span><span class="hud-score" id="score0">0</span></div>
@@ -115,6 +114,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
     <div class="mode-btn" data-mode="online" id="modeOnline">🌐 联机</div>
   </div>
   <span class="ov-label">进攻方球队</span>
+  <div class="team-tabs" id="teamTabs1"></div>
 <script>
 // CBA 2024-2025赛季 全部20支球队球员数据
 var CBA_TEAMS = [
@@ -2771,23 +2771,7 @@ document.addEventListener('touchmove', function(e) {
 }, { passive: false });
 
 // ============ INIT ============
-function hideLoading() {
-  var x = document.getElementById('loading');
-  if (x) { x.style.display = 'none'; x.parentNode && x.parentNode.removeChild(x); }
-}
-function initGame() {
-  try {
-    initCanvas();
-    showScreen('setupOverlay');
-    updateModeUI();
-  } catch(e) { console.error(e); }
-  hideLoading();
-}
-// Run immediately (script at end of body, DOM already parsed)
-initGame();
-// Also on DOMContentLoaded just in case
-document.addEventListener('DOMContentLoaded', initGame);
-// Final cleanup after a short delay
-setTimeout(hideLoading, 500);
-setTimeout(hideLoading, 1500);
+initCanvas();
+showScreen('setupOverlay');
+updateModeUI();
 </script></body></html>
