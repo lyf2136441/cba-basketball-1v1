@@ -8,7 +8,7 @@ var COURT_H = 500
 var FLOOR_Y = 420
 var RIM_X = 888
 var RIM_Y = 180
-var RIM_R = 12
+var RIM_R = 16
 var GRAVITY = 0.45
 
 function GameEngine(canvas, ctx, w, h, opts) {
@@ -85,14 +85,14 @@ function GameEngine(canvas, ctx, w, h, opts) {
 GameEngine.prototype._s = function(v) { return v * this.s }
 
 GameEngine.prototype._init = function() {
-  this.ball = { x: this._s(260), y: this._s(350), vx: 0, vy: 0, r: this._s(12), has: true, rot: 0 }
+  this.ball = { x: this._s(260), y: this._s(350), vx: 0, vy: 0, r: this._s(16), has: true, rot: 0 }
   this._resetPos()
 }
 
 GameEngine.prototype._resetPos = function() {
   var offX = this._s(250), offY = this._s(380)
   var defX = this._s(600), defY = this._s(380)
-  var baseR = this._s(30)
+  var baseR = this._s(38)
   var offVis = this.poss === 0 ? this._p1Vis : this._p2Vis
   var defVis = this.poss === 0 ? this._p2Vis : this._p1Vis
   var offR = baseR * (offVis ? offVis.size : 1)
@@ -143,27 +143,22 @@ GameEngine.prototype.setPlayers = function(p1, p2) {
   this._p2Vis = this._playerVisuals(p2)
 
   // Adjust player radii based on height
-  var baseR = this._s(30)
+  var baseR = this._s(38)
   if (this.off) this.off.r = baseR * (this.poss === 0 ? this._p1Vis.size : this._p2Vis.size)
   if (this.def) this.def.r = baseR * (this.poss === 0 ? this._p2Vis.size : this._p1Vis.size)
 }
 
 GameEngine.prototype._playerVisuals = function(p) {
   if (!p) return { size: 1.0, build: 1.0, skin: 0, hair: 0, acc: 0 }
-  // Height from position
-  var baseHt = 195
-  if (p.pos === 'PG') baseHt = 186
-  else if (p.pos === 'SG') baseHt = 193
-  else if (p.pos === 'SF') baseHt = 201
-  else if (p.pos === 'PF') baseHt = 207
-  else if (p.pos === 'C') baseHt = 213
-  // Seed from player name for variation within position
-  var nameSeed = 0
-  var name = p.name || ''
-  for (var i = 0; i < name.length; i++) nameSeed += name.charCodeAt(i)
-  var htVar = (nameSeed % 13 - 6) // -6 to +6 cm
-  var height = baseHt + htVar
-  var size = 0.72 + (height - 175) / 180 * 0.70 // PG~0.76 C~1.07
+  // Use actual player height if available, fallback to position-based
+  var height = p.height || 195
+  if (!p.height) {
+    var baseHt = 195
+    if (p.pos === 'PG') baseHt = 186; else if (p.pos === 'SG') baseHt = 193
+    else if (p.pos === 'SF') baseHt = 201; else if (p.pos === 'PF') baseHt = 207; else if (p.pos === 'C') baseHt = 213
+    height = baseHt
+  }
+  var size = 0.75 + (height - 175) / 180 * 0.65 // proportional to real height
 
   // Build from strength
   var str = p.strength || 50
@@ -1229,13 +1224,17 @@ GameEngine.prototype.render = function() {
   ctx.save()
   ctx.translate(shakeX, shakeY)
 
-  // Background: always Guo Ailun photo
-  if (this.bgImage) {
-    ctx.drawImage(this.bgImage, 0, 0, w, h)
-    ctx.fillStyle = 'rgba(0,0,0,0.30)'
-    ctx.fillRect(0, 0, w, h)
-  }
-  // If image not loaded yet, just black background — no gradient fallback
+  // Dynamic team background
+  var offP = this.poss === 0 ? this.p1 : this.p2
+  var bgTc = offP ? (offP.teamColor || '#1a6dd4') : '#1a6dd4'
+  var bgGrad = ctx.createLinearGradient(0, 0, 0, h)
+  bgGrad.addColorStop(0, darken(bgTc, 0.85))
+  bgGrad.addColorStop(0.7, darken(bgTc, 0.6))
+  bgGrad.addColorStop(1, darken(bgTc, 0.2))
+  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h)
+  // Jersey pattern
+  ctx.fillStyle = 'rgba(255,255,255,0.02)'
+  for (var si = 0; si < w; si += this._s(40)) { ctx.fillRect(si, 0, this._s(20), h) }
 
   this._drawCourt(ctx)
   if (this._jumpBallPhase !== 'done') this._drawReferee(ctx)
@@ -1249,7 +1248,7 @@ GameEngine.prototype.render = function() {
 }
 
 GameEngine.prototype._drawCourt = function(ctx) {
-  var a = this.bgImage ? 0.55 : 1.0
+  var a = 0.62
   var fy = this._s(FLOOR_Y)
   var offP = this.poss === 0 ? this.p1 : this.p2
   var tc = offP ? (offP.teamColor || '#1a6dd4') : '#1a6dd4'
@@ -1268,20 +1267,19 @@ GameEngine.prototype._drawCourt = function(ctx) {
     ctx.fillRect(bx2, 0, this._s(4), fy)
   }
 
-  // Multi-row crowd (观众)
+  // Crowd (performance: 2 rows, simplified)
   var crowdTime = Date.now() * 0.0004
-  for (var row = 0; row < 4; row++) {
-    var rowY2 = this._s(6 + row * 18)
-    var rowR2 = this._s(5.5 - row * 0.4)
-    var rowCount = 20 - row * 3
+  var crowdColors = ['rgba(50,40,70,0.55)', 'rgba(60,35,50,0.5)', 'rgba(40,45,60,0.55)', 'rgba(55,30,55,0.5)', 'rgba(45,40,55,0.5)']
+  for (var row = 0; row < 2; row++) {
+    var rowY2 = this._s(10 + row * 22)
+    var rowR2 = this._s(6 - row * 0.5)
+    var rowCount = 16 - row * 2
+    var gap = 1000 / rowCount
     for (var ci2 = 0; ci2 < rowCount; ci2++) {
-      var cx4 = this._s(12 + ci2 * (990 / rowCount))
-      var ch = (ci2 * 41 + row * 67) % 360
-      var cs = 14 + (ci2 % 5) * 5
-      var cl = 22 + row * 2 + (ci2 % 3) * 3
-      ctx.fillStyle = 'hsla(' + ch + ',' + cs + '%,' + cl + '%,' + (0.5 + Math.sin(crowdTime * 3 + ci2 + row) * 0.08) + ')'
+      var cx4 = this._s(20 + ci2 * gap)
+      ctx.fillStyle = crowdColors[(ci2 + row * 3) % 5]
       ctx.beginPath()
-      ctx.arc(cx4 + Math.sin(crowdTime * 2 + ci2 * 0.6) * this._s(1), rowY2 + Math.sin(crowdTime * 2.5 + ci2) * this._s(0.6), rowR2, 0, Math.PI * 2)
+      ctx.arc(cx4 + Math.sin(crowdTime * 2 + ci2) * this._s(1.5), rowY2 + Math.sin(crowdTime * 3 + ci2) * this._s(0.8), rowR2, 0, Math.PI * 2)
       ctx.fill()
     }
   }
@@ -1298,9 +1296,23 @@ GameEngine.prototype._drawCourt = function(ctx) {
     ctx.fillRect(gx, fy, this._s(55), this.h - fy)
   }
 
-  // === Side-view: no floor markings (key, baseline, 3pt arc removed) ===
+  // === Court lines (side-view perspective) ===
+  // 3-point arc (shallow curve on floor)
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = this._s(2)
+  ctx.setLineDash([this._s(8), this._s(4)])
+  ctx.beginPath()
+  var arcCx = this._s(RIM_X), arcCy = fy
+  var arcRx = this._s(290), arcRy = this._s(15)
+  ctx.ellipse(arcCx, arcCy + this._s(2), arcRx, arcRy, 0, Math.PI, 0, false)
+  ctx.stroke()
+  ctx.setLineDash([])
 
-  // Ad boards (场边广告牌)
+  // Free throw line (short vertical mark)
+  var ftX = this._s(620)
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = this._s(2)
+  ctx.beginPath(); ctx.moveTo(ftX, fy); ctx.lineTo(ftX, fy + this._s(40)); ctx.stroke()
+
+  // === Ad boards (场边广告牌) ===
   var adY = fy - this._s(1)
   ctx.fillStyle = 'rgba(0,0,0,0.55)'
   ctx.fillRect(0, adY, this.w, this._s(7))
