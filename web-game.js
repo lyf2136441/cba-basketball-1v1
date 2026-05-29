@@ -1,5 +1,9 @@
 // CBA Basketball 1v1 - Web Version
-// Players & utils loaded from players-data.js
+// Players loaded from players-data.js
+
+// ============ UTILS ============
+function darken(hex,amt){hex=hex.replace('#','');var r=Math.max(0,Math.floor(parseInt(hex.substring(0,2),16)*(1-amt))),g=Math.max(0,Math.floor(parseInt(hex.substring(2,4),16)*(1-amt))),b=Math.max(0,Math.floor(parseInt(hex.substring(4,6),16)*(1-amt)));return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)}
+function rgba(hex,a){hex=hex.replace('#','');return 'rgba('+parseInt(hex.substring(0,2),16)+','+parseInt(hex.substring(2,4),16)+','+parseInt(hex.substring(4,6),16)+','+a+')'}
 
 // ============ GAME ENGINE ============
 // 2D篮球游戏核心引擎 - 侧视图版本
