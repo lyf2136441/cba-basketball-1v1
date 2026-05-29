@@ -110,6 +110,18 @@ setTimeout(function() {
   if (c2[0]) c2[0].classList.add('sel');
 }, 200);
 
+// ============ GAME MODE SELECTION ============
+gameState.gameMode = 'ai'; // ai | local | online
+$('modeAI').addEventListener('click', function() { gameState.gameMode = 'ai'; updateModeTabs(); });
+$('modeLocal').addEventListener('click', function() { gameState.gameMode = 'local'; updateModeTabs(); });
+$('modeOnline').addEventListener('click', function() { gameState.gameMode = 'online'; updateModeTabs(); });
+function updateModeTabs() {
+  var m = gameState.gameMode;
+  $('modeAI').classList.toggle('on', m === 'ai');
+  $('modeLocal').classList.toggle('on', m === 'local');
+  $('modeOnline').classList.toggle('on', m === 'online');
+}
+
 // ============ SCORING MODE ============
 function updateModeUI() {
   var m = gameState.scoringMode;
@@ -134,8 +146,20 @@ for (var i = 0; i < timeBtns.length; i++) {
 function startGame() {
   if (!selP1 || !selP2) { alert('请先选择球员'); return; }
   p1 = selP1; p2 = selP2;
+
+  if (gameState.gameMode === 'online') {
+    // Online mode - try WebSocket connection
+    showScreen(null);
+    var wsHost = prompt('输入服务器地址 (格式: IP:端口):', '10.32.17.144:3456');
+    if (!wsHost) { showScreen('setupOverlay'); return; }
+    connectOnline(wsHost);
+    return;
+  }
+
+  // AI or local mode
   showScreen(null);
   gameState.started = true;
+  gameState.isAI = gameState.gameMode === 'ai';
 
   engine = new GameEngine(canvas, ctx, window.innerWidth, window.innerHeight, {
     gameDuration: gameState.duration,
@@ -143,6 +167,9 @@ function startGame() {
   });
   engine.setPlayers(p1, p2);
   engine.scoringMode = gameState.scoringMode;
+  if (gameState.isAI) {
+    engine._aiMode = true; // AI controls defense
+  }
 
   $('p1name').textContent = p1.name;
   $('p1name').style.color = p1.teamColor;
@@ -324,15 +351,3 @@ document.addEventListener('touchmove', function(e) {
 initCanvas();
 showScreen('setupOverlay');
 updateModeUI();
-
-// Initialize audio on first user interaction
-document.addEventListener('touchstart', function initAudio() {
-  if (engine && engine._audioCtx && engine._audioCtx.state === 'suspended') {
-    engine._audioCtx.resume()
-  }
-}, { once: true })
-document.addEventListener('mousedown', function initAudioM() {
-  if (engine && engine._audioCtx && engine._audioCtx.state === 'suspended') {
-    engine._audioCtx.resume()
-  }
-}, { once: true })
