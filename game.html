@@ -519,7 +519,8 @@ GameEngine.prototype._playerVisuals = function(p) {
   var str = p.strength || 50
   var build = 0.82 + (str / 99) * 0.36
 
-  // Skin tone from name hash + position
+  // Skin tone from name hash
+  var nameSeed = 0; var nm = p.name || ''; for (var ni = 0; ni < nm.length; ni++) nameSeed += nm.charCodeAt(ni)
   var skin = (nameSeed % 7) // 0-6: different skin tones
 
   // Hair style from num
