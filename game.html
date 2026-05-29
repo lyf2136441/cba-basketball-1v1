@@ -6,7 +6,7 @@
 <title>CBA 篮球1v1</title>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100vw;height:100vh;overflow:hidden;background:#000;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
 #gc{position:fixed;top:0;left:0;width:100vw;height:100vh}
 #hud{position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;align-items:center;background:rgba(0,0,0,0.55);border-radius:20px;padding:6px 22px;z-index:10;pointer-events:none}
 .hud-side{display:flex;align-items:center;gap:8px}
@@ -80,22 +80,28 @@ html,body{width:100vw;height:100vh;overflow:hidden;background:#000;touch-action:
 </style>
 </head>
 <body>
-<div id="rotateHint" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:#000;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center">
-  <span style="font-size:60px;display:block;margin-bottom:20px">📱</span>
+<div id="rotateHint" style="display:flex;position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:#000;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center">
+  <span style="font-size:60px;display:block;margin-bottom:20px">📱↔️</span>
   <span style="display:block;font-weight:bold;font-size:20px;margin-bottom:10px">请将手机横过来</span>
-  <span style="font-size:14px;color:#888">旋转手机获得最佳游戏体验</span>
+  <span style="font-size:14px;color:#888;margin-bottom:20px">旋转手机获得最佳游戏体验</span>
+  <button onclick="document.getElementById('rotateHint').style.display='none'" style="padding:12px 40px;background:#ff8c00;color:#fff;border:none;border-radius:24px;font-size:16px;font-weight:bold;cursor:pointer">已横屏，进入游戏</button>
 </div>
 <script>
 (function(){
+  // Match media for landscape detection (more reliable)
+  var mq=window.matchMedia('(orientation: landscape)');
   function co(){
     var h=document.getElementById('rotateHint');
     var w=window.innerWidth,ht=window.innerHeight;
-    if(w<ht&&w<768){h.style.display='flex'}
-    else{h.style.display='none'}
+    var isLandscape=mq.matches||w>ht;
+    if(isLandscape||w>=768){h.style.display='none'}
   }
-  window.addEventListener('resize',co);
-  window.addEventListener('orientationchange',function(){setTimeout(co,200)});
-  setTimeout(co,100);
+  mq.addEventListener('change',co);
+  window.addEventListener('resize',function(){setTimeout(co,50)});
+  window.addEventListener('orientationchange',function(){setTimeout(co,100)});
+  // Poll every 500ms as fallback
+  setInterval(co,500);
+  setTimeout(co,200);
   function lock(){
     try{
       if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})
@@ -103,7 +109,6 @@ html,body{width:100vw;height:100vh;overflow:hidden;background:#000;touch-action:
     }catch(e){}
   }
   document.addEventListener('touchstart',lock,{once:true});
-  document.addEventListener('click',lock,{once:true});
 })();
 </script>
 <canvas id="gc"></canvas>
