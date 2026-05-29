@@ -80,7 +80,30 @@ html,body{width:100vw;height:100vh;overflow:hidden;background:#000;touch-action:
 </style>
 </head>
 <body>
+<div id="rotateHint" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:#000;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center">
+  <span style="font-size:60px;display:block;margin-bottom:20px">📱</span>
+  <span style="display:block;font-weight:bold;font-size:20px;margin-bottom:10px">请将手机横过来</span>
+  <span style="font-size:14px;color:#888">旋转手机获得最佳游戏体验</span>
+</div>
 <script>
+(function(){
+  function co(){
+    var h=document.getElementById('rotateHint');
+    var w=window.innerWidth,ht=window.innerHeight;
+    if(w<ht&&w<768){h.style.display='flex'}
+    else{h.style.display='none'}
+  }
+  window.addEventListener('resize',co);
+  window.addEventListener('orientationchange',function(){setTimeout(co,200)});
+  setTimeout(co,100);
+  function lock(){
+    try{
+      if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})
+      if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(function(){})
+    }catch(e){}
+  }
+  document.addEventListener('touchstart',lock,{once:true});
+  document.addEventListener('click',lock,{once:true});
 })();
 </script>
 <canvas id="gc"></canvas>
