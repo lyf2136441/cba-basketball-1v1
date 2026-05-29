@@ -137,6 +137,11 @@ var timeBtns = document.querySelectorAll('.time-btn');
 for (var i = 0; i < timeBtns.length; i++) {
   timeBtns[i].addEventListener('click', function() {
     var dur = parseInt(this.getAttribute('data-dur')) || 120;
+    if (dur === 0) {
+      dur = parseInt($('customTime').value) || 120;
+      dur = Math.max(30, Math.min(600, dur));
+      $('customTime').value = dur;
+    }
     gameState.duration = dur;
     startGame();
   });
