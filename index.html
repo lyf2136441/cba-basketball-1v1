@@ -76,6 +76,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
 .team-tab.sel{background:rgba(255,140,0,0.2);color:#ffd700}
 
 .hidden{display:none!important}
+#rotatePrompt{display:none}
+@media screen and (orientation:portrait) and (max-width:768px){
+  #rotatePrompt{display:flex}
+}
+@media screen and (orientation:landscape){
+  #rotatePrompt{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -97,8 +104,21 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
     <div class="act-btn" id="btnBlock"><span class="ab-ico">🧱</span><span class="ab-txt">盖帽</span></div>
   </div>
 </div>
+<!-- Rotation prompt -->
+<div class="overlay" id="rotatePrompt"><div class="ov-box">
+  <span class="ov-title" style="font-size:40px">📱↔️</span>
+  <span class="ov-title">请横屏使用</span>
+  <span style="color:#aaa;font-size:14px">将手机横过来体验最佳游戏</span>
+</div></div>
+
 <div class="overlay" id="setupOverlay"><div class="ov-box" id="setupBox">
   <span class="ov-title">选择球员</span>
+  <span class="ov-label">游戏模式</span>
+  <div class="mode-opts" id="modeSelect">
+    <div class="mode-btn on" data-mode="ai" id="modeAI">🤖 单人</div>
+    <div class="mode-btn" data-mode="local" id="modeLocal">👥 双人</div>
+    <div class="mode-btn" data-mode="online" id="modeOnline">🌐 联机</div>
+  </div>
   <span class="ov-label">进攻方球队</span>
   <div class="team-tabs" id="teamTabs1"></div>
   <div class="player-grid" id="playerGrid"></div>
