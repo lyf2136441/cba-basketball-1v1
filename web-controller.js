@@ -197,17 +197,21 @@ function formatTime(sec) {
 // ============ GAME LOOP ============
 function tick(now) {
   if (!engine || !gameState.started) { gameLoop = requestAnimationFrame(tick); return; }
-  var dt = now - lastFrame;
-  lastFrame = now;
-  if (dt > 50) dt = 33;
-
-  engine.update(dt);
-  engine.render();
-  syncUI();
-
-  if (engine.gameOver && !engine._uiEnded) {
-    engine._uiEnded = true;
-    showGameOver();
+  try {
+    var dt = now - lastFrame;
+    lastFrame = now;
+    if (dt > 50) dt = 33;
+    engine.update(dt);
+    engine.render();
+    syncUI();
+    if (engine.gameOver && !engine._uiEnded) {
+      engine._uiEnded = true;
+      showGameOver();
+    }
+  } catch(e) {
+    console.error('Game error:', e);
+    var ld = document.getElementById('loading');
+    if (ld) { ld.textContent = '出错了: ' + e.message; ld.style.display = 'block'; }
   }
   gameLoop = requestAnimationFrame(tick);
 }
@@ -353,6 +357,19 @@ document.addEventListener('touchmove', function(e) {
 }, { passive: false });
 
 // ============ INIT ============
-initCanvas();
-showScreen('setupOverlay');
-updateModeUI();
+document.addEventListener('DOMContentLoaded', function() {
+  initCanvas();
+  showScreen('setupOverlay');
+  updateModeUI();
+  var ld = document.getElementById('loading');
+  if (ld) ld.style.display = 'none';
+  console.log('Game initialized successfully');
+});
+// Fallback: if DOM already loaded
+if (document.readyState === 'interactive' || document.readyState === 'complete') {
+  initCanvas();
+  showScreen('setupOverlay');
+  updateModeUI();
+  var ld2 = document.getElementById('loading');
+  if (ld2) ld2.style.display = 'none';
+}
