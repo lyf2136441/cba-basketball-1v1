@@ -1998,3 +1998,90 @@ GameEngine.prototype._drawUI = function(ctx) {
   ctx.fillRect(this._s(8), sbY, sbW * sc2, sbH)
 }
 
+
+// ============ SOUND SYSTEM ============
+GameEngine.prototype._initSound = function() {
+  try { this._audioCtx = new (window.AudioContext || window.webkitAudioContext)() } catch(e) { this._audioCtx = null }
+}
+GameEngine.prototype._playBeep = function(freq, dur, type, vol, glide) {
+  if (!this._audioCtx) return
+  var ctx = this._audioCtx, o = ctx.createOscillator(), g = ctx.createGain()
+  o.type = type || 'sine'; o.frequency.value = freq || 440
+  if (glide) o.frequency.linearRampToValueAtTime(freq * (glide > 0 ? 0.5 : 1.5), ctx.currentTime + dur)
+  g.gain.setValueAtTime(vol || 0.15, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
+  o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + dur)
+}
+GameEngine.prototype._sfx = function(name) {
+  if (!this._audioCtx) return
+  try {
+    if (name === 'swish') { this._playBeep(800, 0.25, 'sine', 0.12); setTimeout(this._playBeep.bind(this, 1200, 0.2, 'sine', 0.08), 100) }
+    else if (name === 'bounce') { this._playBeep(200, 0.15, 'triangle', 0.1); setTimeout(this._playBeep.bind(this, 150, 0.12, 'triangle', 0.08), 50) }
+    else if (name === 'buzzer') { this._playBeep(220, 0.5, 'square', 0.1); setTimeout(this._playBeep.bind(this, 180, 0.4, 'square', 0.08), 200) }
+    else if (name === 'block') { this._playBeep(100, 0.3, 'sawtooth', 0.12) }
+    else if (name === 'steal') { this._playBeep(600, 0.15, 'square', 0.08, 1) }
+    else if (name === 'score') { this._playBeep(523, 0.15, 'sine', 0.1); setTimeout(this._playBeep.bind(this, 659, 0.12, 'sine', 0.1), 100); setTimeout(this._playBeep.bind(this, 784, 0.2, 'sine', 0.12), 200) }
+    else if (name === 'crowd') { for (var i = 0; i < 8; i++) { var f = 150 + Math.random() * 400; setTimeout(this._playBeep.bind(this, f, 0.3 + Math.random() * 0.3, 'triangle', 0.04), i * 40) } }
+  } catch(e) {}
+}
+
+// ============ STREAK SYSTEM ============
+GameEngine.prototype._updateStreak = function(made) {
+  if (made) {
+    this._streakCount++
+    if (this._streakCount === 2) this._sayCommentary('手感来了！')
+    else if (this._streakCount === 3) this._sayCommentary('火力全开！')
+    else if (this._streakCount >= 4) this._sayCommentary('不可阻挡！！')
+  } else { this._streakCount = 0 }
+}
+
+// ============ INIT PATCH ============
+var _origInit = GameEngine.prototype._init
+GameEngine.prototype._init = function() {
+  _origInit.call(this)
+  this._streakCount = 0
+  this._initSound()
+}
+
+// Add sound to key moments
+var _origScore = GameEngine.prototype._score
+GameEngine.prototype._score = function() {
+  var made = this.shotResult && this.shotResult.made
+  if (made) { this._sfx('score'); setTimeout(this._sfx.bind(this, 'crowd'), 300) }
+  else { this._sfx('bounce') }
+  this._updateStreak(made)
+  return _origScore.call(this)
+}
+
+var _origAttemptBlock = GameEngine.prototype.attemptBlock
+GameEngine.prototype.attemptBlock = function() {
+  var ret = _origAttemptBlock.call(this)
+  if (this.blockAnim > 0 && this._dist(this.def, this.ball) < this._s(80)) this._sfx('block')
+  return ret
+}
+
+var _origAttemptSteal = GameEngine.prototype.attemptSteal
+GameEngine.prototype.attemptSteal = function() {
+  var ret = _origAttemptSteal.call(this)
+  if (this.stealAnim > 0) this._sfx('steal')
+  return ret
+}
+
+// Add energy bar to HUD rendering
+var _origDrawUI = GameEngine.prototype._drawUI
+GameEngine.prototype._drawUI = function(ctx) {
+  _origDrawUI.call(this, ctx)
+  // Energy bars
+  var barW = this._s(50), barH = this._s(4), barX = this._s(8), barY = this.h - this._s(18)
+  // Offense energy
+  var oe = this.offEnergy / 100
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(barX, barY, barW, barH)
+  ctx.fillStyle = oe > 0.3 ? '#0c6' : '#f44'; ctx.fillRect(barX, barY, barW * oe, barH)
+  // Defense energy  
+  var de = this.defEnergy / 100
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(this.w - barX - barW, barY, barW, barH)
+  ctx.fillStyle = de > 0.3 ? '#0c6' : '#f44'; ctx.fillRect(this.w - barX - barW, barY, barW * de, barH)
+  // Labels
+  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = Math.floor(this._s(9)) + 'px sans-serif'
+  ctx.textAlign = 'left'; ctx.fillText('体力', barX, barY - this._s(2))
+  ctx.textAlign = 'right'; ctx.fillText('体力', this.w - barX, barY - this._s(2))
+}
