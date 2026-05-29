@@ -80,6 +80,33 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
 </style>
 </head>
 <body>
+<script>
+// Force landscape if in portrait on mobile
+(function(){
+  function checkOrient(){
+    var w=window.innerWidth,h=window.innerHeight;
+    var isPortrait=w<h&&w<768;
+    if(isPortrait){
+      document.body.style.transform='rotate(90deg)';
+      document.body.style.transformOrigin='center center';
+      document.body.style.width=h+'px';
+      document.body.style.height=w+'px';
+      document.body.style.position='fixed';
+      document.body.style.top='0';document.body.style.left='0';
+      document.body.style.overflow='hidden';
+      // Resize canvas for rotated view
+      setTimeout(function(){
+        var c=document.getElementById('gc');if(c){c.width=h*window.devicePixelRatio;c.height=w*window.devicePixelRatio;c.style.width=h+'px';c.style.height=w+'px'}
+      },500)
+    }
+  }
+  window.addEventListener('resize',checkOrient);
+  window.addEventListener('orientationchange',function(){setTimeout(checkOrient,300)});
+  setTimeout(checkOrient,100);
+  // Try Screen Orientation API
+  try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){}
+})();
+</script>
 <canvas id="gc"></canvas>
 <div id="hud">
   <div class="hud-side"><span class="hud-name" id="p1name"></span><span class="hud-score" id="score0">0</span></div>
@@ -88,33 +115,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
 </div>
 <div id="meter"><div class="meter-bg"><div class="meter-green" id="meterGreen"></div><div class="meter-fill" id="meterFill"></div><div class="meter-mark" id="meterMark"></div></div><span class="meter-txt">松手投篮！</span></div>
 <div id="msg"><span id="msgText"></span></div>
-<div class="joy-area" id="joyArea"><div class="joy-base" id="joyBase"><div class="joy-dot" id="joyDot" style="left:50%;top:50%"></div></div><span class="joy-label">移动</span></div>
-<div class="act-area" id="actArea">
-  <div class="act-btn big shoot-btn" id="btnShoot"><span class="ab-ico">🏀</span><span class="ab-txt" id="btnShootLabel">按住投篮</span></div>
-  <div class="act-btn big reb-btn hidden" id="btnRebound"><span class="ab-ico">🏀</span><span class="ab-txt">捡球</span></div>
-  <div class="act-row">
-    <div class="act-btn" id="btnDrive"><span class="ab-ico">⚡</span><span class="ab-txt">突破</span></div>
-    <div class="act-btn" id="btnSteal"><span class="ab-ico">✋</span><span class="ab-txt">抢断</span></div>
-    <div class="act-btn" id="btnBlock"><span class="ab-ico">🧱</span><span class="ab-txt">盖帽</span></div>
-  </div>
-</div>
-<!-- Rotation prompt -->
-<div class="overlay" id="rotatePrompt"><div class="ov-box">
-  <span class="ov-title" style="font-size:40px">📱↔️</span>
-  <span class="ov-title">请横屏使用</span>
-  <span style="color:#aaa;font-size:14px">将手机横过来体验最佳游戏</span>
-</div></div>
-
-<div class="overlay" id="setupOverlay"><div class="ov-box" id="setupBox">
-  <span class="ov-title">选择球员</span>
-  <span class="ov-label">游戏模式</span>
-  <div class="mode-opts" id="modeSelect">
-    <div class="mode-btn on" data-mode="ai" id="modeAI">🏀 单挑</div>
-    <div class="mode-btn" data-mode="3pt" id="mode3pt">🎯 三分</div>
-    <div class="mode-btn" data-mode="local" id="modeLocal">👥 双人</div>
-    <div class="mode-btn" data-mode="online" id="modeOnline">🌐 联机</div>
-  </div>
-  <span class="ov-label">进攻方球队</span>
 <script>
 // CBA 2024-2025赛季 全部20支球队球员数据
 var CBA_TEAMS = [
