@@ -1,0 +1,2791 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>CBA 篮球1v1</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
+#gc{position:absolute;top:0;left:0;width:100%;height:100%}
+#hud{position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;align-items:center;background:rgba(0,0,0,0.55);border-radius:20px;padding:6px 22px;z-index:10;pointer-events:none}
+.hud-side{display:flex;align-items:center;gap:8px}
+.hud-name{font-size:13px;font-weight:700;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis}
+.hud-score{font-size:26px;font-weight:900;color:#fff;min-width:26px;text-align:center}
+.hud-mid{display:flex;flex-direction:column;align-items:center;margin:0 14px}
+.hud-vs{font-size:11px;color:rgba(255,255,255,0.35)}
+.hud-clock{font-size:12px;color:#ff6}
+.hud-timer{font-size:12px;color:#ff9;margin-top:1px}
+
+#meter{position:absolute;left:50%;bottom:200px;transform:translateX(-50%);text-align:center;z-index:10;pointer-events:none;display:none}
+#meter.show{display:block}
+.meter-bg{width:260px;height:16px;background:rgba(0,0,0,0.6);border-radius:8px;overflow:hidden;position:relative;border:2px solid rgba(255,255,255,0.15)}
+.meter-green{position:absolute;top:0;height:100%;background:rgba(0,220,80,0.45);border-radius:8px;z-index:1}
+.meter-fill{position:absolute;top:0;left:0;height:100%;background:linear-gradient(90deg,#ff6a00,#ffaa00);border-radius:8px;z-index:0}
+.meter-mark{position:absolute;top:-3px;width:4px;height:22px;background:#fff;border-radius:2px;transform:translateX(-50%);z-index:2}
+.meter-txt{display:block;font-size:13px;color:#fff;margin-top:5px;font-weight:700}
+
+#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10;background:rgba(0,0,0,0.7);padding:8px 26px;border-radius:16px;pointer-events:none;display:none}
+#msg.show{display:block}
+#msg span{font-size:16px;color:#ff0;font-weight:700}
+
+.joy-area{position:absolute;bottom:44px;left:20px;z-index:20;display:flex;flex-direction:column;align-items:center}
+.joy-base{width:120px;height:120px;background:rgba(255,255,255,0.07);border:3px solid rgba(255,255,255,0.2);border-radius:50%;position:relative}
+.joy-dot{width:46px;height:46px;background:rgba(255,140,0,0.55);border-radius:50%;position:absolute;transform:translate(-50%,-50%);pointer-events:none;transition:none}
+.joy-label{font-size:11px;color:rgba(255,255,255,0.3);margin-top:5px}
+
+.act-area{position:absolute;bottom:44px;right:20px;z-index:20;display:flex;flex-direction:column;align-items:flex-end}
+.act-row{display:flex;margin-top:8px;gap:8px}
+.act-btn{width:82px;height:58px;border-radius:14px;border:2px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.act-btn:active,.act-btn.on{background:rgba(255,140,0,0.3);border-color:#ff8c00}
+.act-btn.big{width:128px;height:74px}
+.act-btn.shoot-btn{background:rgba(255,68,68,0.18);border-color:rgba(255,68,68,0.35)}
+.act-btn.reb-btn{background:rgba(0,255,136,0.18);border-color:rgba(0,255,136,0.35)}
+.ab-ico{font-size:22px;line-height:1}
+.ab-txt{font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px}
+.act-btn.big .ab-ico{font-size:28px}
+.act-btn.big .ab-txt{font-size:14px}
+
+.overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.82);display:flex;align-items:center;justify-content:center;z-index:100}
+.ov-box{width:340px;max-height:88vh;overflow-y:auto;background:#1a1a2e;border-radius:20px;padding:30px 26px;text-align:center;-webkit-overflow-scrolling:touch}
+.ov-title{display:block;font-size:22px;font-weight:900;color:#ffd700;margin-bottom:18px}
+.ov-label{display:block;font-size:13px;color:rgba(255,255,255,0.5);margin:14px 0 8px}
+.ov-score{display:block;font-size:40px;font-weight:900;color:#fff;margin:8px 0 14px}
+.ov-stat{display:block;font-size:14px;color:#aaa;margin:3px 0}
+.ov-btn{display:block;width:100%;height:54px;line-height:54px;background:linear-gradient(135deg,#ff8c00,#ff4444);color:#fff;font-size:18px;font-weight:700;border-radius:27px;border:none;margin-top:16px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ov-btn:active{opacity:0.8}
+.ov-btn2{display:block;width:100%;height:46px;line-height:46px;background:rgba(255,255,255,0.08);color:#ccc;font-size:15px;border-radius:23px;border:none;margin-top:10px;cursor:pointer}
+
+.time-btn{display:block;width:100%;height:52px;line-height:52px;background:rgba(255,140,0,0.12);color:#ffd700;font-size:17px;font-weight:700;border-radius:26px;border:2px solid rgba(255,140,0,0.25);margin:4px 0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.time-btn:active{background:rgba(255,140,0,0.3)}
+
+.mode-opts{display:flex;gap:12px;width:100%}
+.mode-btn{flex:1;height:46px;line-height:46px;text-align:center;border-radius:23px;font-size:15px;font-weight:700;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.12);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mode-btn.on{color:#fff;background:rgba(255,140,0,0.3);border-color:#ff8c00;box-shadow:0 0 12px rgba(255,140,0,0.3)}
+.mode-hint{display:block;font-size:12px;color:rgba(255,255,255,0.35);margin-top:5px}
+
+.player-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:8px 0}
+.player-card{width:90px;padding:10px 4px;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);border-radius:12px;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all 0.1s}
+.player-card.sel{border-color:#ff8c00;background:rgba(255,140,0,0.2)}
+.player-card .p-num{font-size:26px;font-weight:900;display:block}
+.player-card .p-name{font-size:11px;margin-top:3px;display:block;color:#ccc}
+.player-card .p-pos{font-size:10px;color:#888}
+.player-vs{text-align:center;font-size:16px;color:#555;margin:4px 0}
+.team-tabs{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0;max-height:80px;overflow-y:auto}
+.team-tab{font-size:10px;padding:4px 7px;background:rgba(255,255,255,0.05);border-radius:8px;cursor:pointer;white-space:nowrap;color:rgba(255,255,255,0.6)}
+.team-tab.sel{background:rgba(255,140,0,0.2);color:#ffd700}
+
+.hidden{display:none!important}
+#rotatePrompt{display:none}
+</style>
+</head>
+<body>
+<div id="loading" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#ffd700;font-size:20px;z-index:200;font-weight:700;pointer-events:none">加载中...</div>
+<canvas id="gc"></canvas>
+<div id="hud">
+  <div class="hud-side"><span class="hud-name" id="p1name"></span><span class="hud-score" id="score0">0</span></div>
+  <div class="hud-mid"><span class="hud-vs">VS</span><span class="hud-clock" id="shotClock">24s</span><span class="hud-timer" id="gameTimer">2:00</span></div>
+  <div class="hud-side"><span class="hud-score" id="score1">0</span><span class="hud-name" id="p2name"></span></div>
+</div>
+<div id="meter"><div class="meter-bg"><div class="meter-green" id="meterGreen"></div><div class="meter-fill" id="meterFill"></div><div class="meter-mark" id="meterMark"></div></div><span class="meter-txt">松手投篮！</span></div>
+<div id="msg"><span id="msgText"></span></div>
+<div class="joy-area" id="joyArea"><div class="joy-base" id="joyBase"><div class="joy-dot" id="joyDot" style="left:50%;top:50%"></div></div><span class="joy-label">移动</span></div>
+<div class="act-area" id="actArea">
+  <div class="act-btn big shoot-btn" id="btnShoot"><span class="ab-ico">🏀</span><span class="ab-txt" id="btnShootLabel">按住投篮</span></div>
+  <div class="act-btn big reb-btn hidden" id="btnRebound"><span class="ab-ico">🏀</span><span class="ab-txt">捡球</span></div>
+  <div class="act-row">
+    <div class="act-btn" id="btnDrive"><span class="ab-ico">⚡</span><span class="ab-txt">突破</span></div>
+    <div class="act-btn" id="btnSteal"><span class="ab-ico">✋</span><span class="ab-txt">抢断</span></div>
+    <div class="act-btn" id="btnBlock"><span class="ab-ico">🧱</span><span class="ab-txt">盖帽</span></div>
+  </div>
+</div>
+<!-- Rotation prompt -->
+<div class="overlay" id="rotatePrompt"><div class="ov-box">
+  <span class="ov-title" style="font-size:40px">📱↔️</span>
+  <span class="ov-title">请横屏使用</span>
+  <span style="color:#aaa;font-size:14px">将手机横过来体验最佳游戏</span>
+</div></div>
+
+<div class="overlay" id="setupOverlay"><div class="ov-box" id="setupBox">
+  <span class="ov-title">选择球员</span>
+  <span class="ov-label">游戏模式</span>
+  <div class="mode-opts" id="modeSelect">
+    <div class="mode-btn on" data-mode="ai" id="modeAI">🤖 单人</div>
+    <div class="mode-btn" data-mode="local" id="modeLocal">👥 双人</div>
+    <div class="mode-btn" data-mode="online" id="modeOnline">🌐 联机</div>
+  </div>
+  <span class="ov-label">进攻方球队</span>
+  <div class="team-tabs" id="teamTabs1"></div>
+<script>
+// CBA 2024-2025赛季 全部20支球队球员数据
+var CBA_TEAMS = [
+  {id:'liaoning',name:'辽宁本钢',abbr:'辽宁',color:'#c8102e',players:[
+    {id:'zhaojiwei',name:'赵继伟',num:3,pos:'PG',shooting:82,speed:85,strength:65,defense:78,dribbling:92,jumping:68,height:185},
+    {id:'guoailun',name:'郭艾伦',num:13,pos:'SG',shooting:78,speed:92,strength:72,defense:75,dribbling:95,jumping:75,height:192},
+    {id:'zhangzhenlin',name:'张镇麟',num:77,pos:'SF',shooting:80,speed:88,strength:80,defense:82,dribbling:78,jumping:90,height:205},
+    {id:'fugao',name:'付豪',num:1,pos:'PF',shooting:76,speed:72,strength:85,defense:70,dribbling:68,jumping:72,height:208},
+    {id:'hanjun',name:'韩德君',num:55,pos:'C',shooting:65,speed:50,strength:95,defense:78,dribbling:45,jumping:45,height:215},
+    {id:'lixiaoxu',name:'李晓旭',num:22,pos:'PF',shooting:70,speed:65,strength:88,defense:82,dribbling:60,jumping:62,height:207},
+    {id:'congmingchen',name:'丛明晨',num:10,pos:'SF',shooting:78,speed:76,strength:68,defense:70,dribbling:72,jumping:74,height:199},
+    {id:'morland',name:'莫兰德',num:25,pos:'C',shooting:55,speed:65,strength:92,defense:90,dribbling:50,jumping:78,height:208},
+    {id:'fogg',name:'弗格',num:4,pos:'SG',shooting:90,speed:86,strength:75,defense:82,dribbling:88,jumping:76,height:191},
+    {id:'liuhuyi',name:'刘雁宇',num:17,pos:'C',shooting:60,speed:62,strength:80,defense:68,dribbling:48,jumping:70,height:210},
+  ]},
+  {id:'guangdong',name:'广东东阳光',abbr:'广东',color:'#003399',players:[
+    {id:'yijianlian',name:'易建联',num:9,pos:'C',shooting:85,speed:72,strength:90,defense:88,dribbling:62,jumping:88,height:213},
+    {id:'humingxuan',name:'胡明轩',num:3,pos:'SG',shooting:84,speed:86,strength:72,defense:80,dribbling:85,jumping:78,height:191},
+    {id:'xujie',name:'徐杰',num:2,pos:'PG',shooting:82,speed:84,strength:58,defense:74,dribbling:90,jumping:66,height:179},
+    {id:'zhourui',name:'周琦',num:26,pos:'C',shooting:72,speed:70,strength:88,defense:92,dribbling:55,jumping:85,height:216},
+    {id:'renjunfei',name:'任骏飞',num:20,pos:'PF',shooting:74,speed:68,strength:82,defense:78,dribbling:65,jumping:68,height:203},
+    {id:'duzhunwang',name:'杜润旺',num:18,pos:'PF',shooting:80,speed:66,strength:78,defense:65,dribbling:62,jumping:64,height:205},
+    {id:'zhanghaoji',name:'张皓嘉',num:25,pos:'SF',shooting:72,speed:72,strength:74,defense:68,dribbling:70,jumping:72,height:200},
+    {id:'waters',name:'沃特斯',num:1,pos:'PG',shooting:85,speed:94,strength:62,defense:72,dribbling:95,jumping:80,height:178},
+    {id:'weems',name:'威姆斯',num:13,pos:'SF',shooting:78,speed:82,strength:80,defense:75,dribbling:82,jumping:82,height:198},
+    {id:'xuxin',name:'徐昕',num:19,pos:'C',shooting:56,speed:55,strength:82,defense:72,dribbling:40,jumping:65,height:226},
+  ]},
+  {id:'xinjiang',name:'新疆伊力特',abbr:'新疆',color:'#0055a5',players:[
+    {id:'abdusalam',name:'阿不都沙拉木',num:23,pos:'PF',shooting:82,speed:76,strength:84,defense:80,dribbling:72,jumping:76,height:202},
+    {id:'qilin',name:'齐麟',num:11,pos:'SF',shooting:84,speed:82,strength:74,defense:72,dribbling:76,jumping:85,height:199},
+    {id:'zhaorui',name:'赵睿',num:8,pos:'SG',shooting:78,speed:86,strength:80,defense:82,dribbling:86,jumping:78,height:195},
+    {id:'jones',name:'多米尼克·琼斯',num:55,pos:'SG',shooting:80,speed:88,strength:85,defense:78,dribbling:90,jumping:82,height:193},
+    {id:'wuguanxi',name:'吴冠希',num:9,pos:'C',shooting:62,speed:62,strength:86,defense:80,dribbling:48,jumping:70,height:210},
+    {id:'xirreli',name:'西热力江',num:7,pos:'SG',shooting:76,speed:72,strength:74,defense:76,dribbling:74,jumping:66,height:191},
+    {id:'liyiyang',name:'李炎哲',num:13,pos:'C',shooting:56,speed:52,strength:92,defense:78,dribbling:38,jumping:55,height:211},
+    {id:'tangcaiyu',name:'唐才育',num:5,pos:'SF',shooting:74,speed:74,strength:68,defense:68,dribbling:70,jumping:72,height:197},
+    {id:'huangrongqi',name:'黄荣奇',num:4,pos:'PG',shooting:68,speed:84,strength:66,defense:70,dribbling:80,jumping:76,height:190},
+    {id:'zhuan',name:'朱旭航',num:22,pos:'PF',shooting:76,speed:70,strength:80,defense:74,dribbling:65,jumping:74,height:203},
+  ]},
+  {id:'zhejiang',name:'浙江稠州金租',abbr:'浙江',color:'#b22222',players:[
+    {id:'wuqiang',name:'吴前',num:33,pos:'SG',shooting:92,speed:84,strength:68,defense:72,dribbling:85,jumping:70,height:189},
+    {id:'chengpeng',name:'程帅澎',num:6,pos:'SG',shooting:80,speed:82,strength:72,defense:78,dribbling:80,jumping:76,height:193},
+    {id:'liuyize',name:'刘泽一',num:10,pos:'PF',shooting:72,speed:74,strength:82,defense:76,dribbling:66,jumping:74,height:204},
+    {id:'wangyibo',name:'王奕博',num:15,pos:'PG',shooting:70,speed:86,strength:62,defense:74,dribbling:84,jumping:70,height:186},
+    {id:'yujiahao',name:'余嘉豪',num:11,pos:'C',shooting:68,speed:55,strength:90,defense:82,dribbling:42,jumping:62,height:221},
+    {id:'luzhouwenbo',name:'陆文博',num:8,pos:'SF',shooting:76,speed:78,strength:70,defense:76,dribbling:70,jumping:78,height:192},
+    {id:'gaily',name:'盖利',num:3,pos:'SF',shooting:78,speed:86,strength:78,defense:82,dribbling:80,jumping:84,height:196},
+    {id:'wangzilu',name:'王子路',num:12,pos:'PF',shooting:68,speed:70,strength:78,defense:72,dribbling:62,jumping:70,height:202},
+  ]},
+  {id:'guangsha',name:'浙江广厦雄狮',abbr:'广厦',color:'#f5a623',players:[
+    {id:'sunminghui',name:'孙铭徽',num:17,pos:'PG',shooting:80,speed:90,strength:74,defense:82,dribbling:92,jumping:80,height:188},
+    {id:'huzhinqiu',name:'胡金秋',num:21,pos:'PF',shooting:86,speed:74,strength:84,defense:80,dribbling:68,jumping:76,height:210},
+    {id:'zhaoyanhao',name:'赵岩昊',num:25,pos:'SG',shooting:82,speed:84,strength:65,defense:72,dribbling:80,jumping:74,height:195},
+    {id:'zhujunlong',name:'朱俊龙',num:10,pos:'SF',shooting:74,speed:78,strength:76,defense:82,dribbling:72,jumping:80,height:200},
+    {id:'xuzhonghao',name:'许钟豪',num:24,pos:'C',shooting:60,speed:50,strength:90,defense:78,dribbling:40,jumping:52,height:212},
+    {id:'okafo',name:'奥卡福',num:15,pos:'C',shooting:72,speed:65,strength:88,defense:82,dribbling:52,jumping:74,height:211},
+    {id:'weizhe',name:'威哲',num:2,pos:'PG',shooting:74,speed:82,strength:66,defense:70,dribbling:86,jumping:72,height:185},
+    {id:'wuxiao',name:'吴骁',num:5,pos:'PF',shooting:62,speed:68,strength:82,defense:72,dribbling:55,jumping:68,height:204},
+  ]},
+  {id:'shanghai',name:'上海久事',abbr:'上海',color:'#1e40af',players:[
+    {id:'wangzhelin',name:'王哲林',num:94,pos:'C',shooting:76,speed:62,strength:88,defense:78,dribbling:52,jumping:65,height:214},
+    {id:'liutricen',name:'刘铮',num:5,pos:'SG',shooting:78,speed:80,strength:68,defense:84,dribbling:78,jumping:72,height:192},
+    {id:'luohandichen',name:'罗汉琛',num:33,pos:'PG',shooting:72,speed:84,strength:62,defense:70,dribbling:82,jumping:66,height:185},
+    {id:'renjewei',name:'任骏威',num:9,pos:'PF',shooting:74,speed:68,strength:80,defense:74,dribbling:64,jumping:64,height:202},
+    {id:'guohaowen',name:'郭昊文',num:7,pos:'SG',shooting:72,speed:88,strength:74,defense:66,dribbling:82,jumping:84,height:201},
+    {id:'lihongquan',name:'李弘权',num:14,pos:'SF',shooting:74,speed:76,strength:78,defense:72,dribbling:70,jumping:78,height:198},
+    {id:'bledsoe',name:'布莱德索',num:2,pos:'PG',shooting:78,speed:90,strength:82,defense:80,dribbling:92,jumping:82,height:185},
+    {id:'yanpengfei',name:'闫鹏飞',num:10,pos:'C',shooting:64,speed:58,strength:84,defense:72,dribbling:45,jumping:58,height:210},
+  ]},
+  {id:'beijing',name:'北京北汽',abbr:'北京',color:'#0066cc',players:[
+    {id:'zengfanbo',name:'曾凡博',num:1,pos:'SF',shooting:82,speed:84,strength:72,defense:78,dribbling:74,jumping:90,height:206},
+    {id:'fangshou',name:'方硕',num:8,pos:'SG',shooting:80,speed:78,strength:70,defense:72,dribbling:82,jumping:68,height:189},
+    {id:'zhairan',name:'翟晓川',num:20,pos:'PF',shooting:76,speed:74,strength:82,defense:80,dribbling:68,jumping:76,height:204},
+    {id:'fanzi',name:'范子铭',num:17,pos:'C',shooting:68,speed:62,strength:86,defense:76,dribbling:48,jumping:62,height:210},
+    {id:'tianyouxiang',name:'田宇翔',num:25,pos:'PG',shooting:68,speed:82,strength:64,defense:74,dribbling:80,jumping:68,height:183},
+    {id:'leaf',name:'利夫',num:2,pos:'PF',shooting:72,speed:74,strength:82,defense:78,dribbling:66,jumping:80,height:208},
+    {id:'zhangcairren',name:'张才仁',num:16,pos:'SG',shooting:72,speed:74,strength:68,defense:68,dribbling:72,jumping:70,height:196},
+    {id:'johnson',name:'尼克·约翰逊',num:0,pos:'PG',shooting:76,speed:88,strength:74,defense:76,dribbling:88,jumping:80,height:188},
+  ]},
+  {id:'beikong',name:'北京控股',abbr:'北控',color:'#8b0000',players:[
+    {id:'zhangfan',name:'张帆',num:6,pos:'SG',shooting:84,speed:80,strength:70,defense:72,dribbling:78,jumping:70,height:193},
+    {id:'zozotonglin',name:'邹雨宸',num:10,pos:'C',shooting:68,speed:62,strength:88,defense:80,dribbling:48,jumping:72,height:207},
+    {id:'liuleather',name:'廖三宁',num:2,pos:'PG',shooting:72,speed:86,strength:66,defense:70,dribbling:88,jumping:76,height:189},
+    {id:'wangshaojie',name:'王少杰',num:14,pos:'PF',shooting:70,speed:74,strength:78,defense:74,dribbling:64,jumping:78,height:208},
+    {id:'shenjie',name:'沈梓捷',num:11,pos:'C',shooting:64,speed:68,strength:86,defense:82,dribbling:48,jumping:80,height:210},
+    {id:'field',name:'费尔德',num:5,pos:'PG',shooting:80,speed:92,strength:72,defense:74,dribbling:92,jumping:82,height:175},
+    {id:'mengzokai',name:'孟子凯',num:1,pos:'SF',shooting:74,speed:74,strength:72,defense:68,dribbling:70,jumping:74,height:196},
+  ]},
+  {id:'shandong',name:'山东高速',abbr:'山东',color:'#e60012',players:[
+    {id:'gaosyan',name:'高诗岩',num:0,pos:'PG',shooting:72,speed:84,strength:68,defense:84,dribbling:84,jumping:72,height:186},
+    {id:'taohanlin',name:'陶汉林',num:20,pos:'C',shooting:65,speed:58,strength:94,defense:78,dribbling:42,jumping:60,height:209},
+    {id:'chenpeidong',name:'陈培东',num:44,pos:'SG',shooting:76,speed:82,strength:68,defense:70,dribbling:78,jumping:74,height:190},
+    {id:'jiachengyi',name:'贾诚',num:23,pos:'PF',shooting:72,speed:68,strength:84,defense:72,dribbling:60,jumping:68,height:207},
+    {id:'hanslin',name:'哈德森',num:14,pos:'SG',shooting:88,speed:82,strength:76,defense:74,dribbling:84,jumping:74,height:188},
+    {id:'gailiwo',name:'吉伦沃特',num:33,pos:'PF',shooting:78,speed:74,strength:86,defense:74,dribbling:68,jumping:76,height:204},
+    {id:'jiaoclong',name:'焦海龙',num:4,pos:'PF',shooting:70,speed:70,strength:80,defense:74,dribbling:62,jumping:72,height:206},
+  ]},
+  {id:'guangzhou',name:'广州龙狮',abbr:'广州',color:'#e20613',players:[
+    {id:'chenyingjun',name:'陈盈骏',num:9,pos:'PG',shooting:78,speed:84,strength:70,defense:76,dribbling:88,jumping:72,height:183},
+    {id:'zhumingzhen',name:'祝铭震',num:7,pos:'SF',shooting:76,speed:78,strength:78,defense:78,dribbling:72,jumping:76,height:196},
+    {id:'cuijinyi',name:'崔永熙',num:8,pos:'SG',shooting:78,speed:82,strength:74,defense:76,dribbling:78,jumping:84,height:199},
+    {id:'jiabumingru',name:'贾明儒',num:3,pos:'PG',shooting:70,speed:80,strength:62,defense:66,dribbling:82,jumping:66,height:185},
+    {id:'guoKaifa',name:'郭凯',num:14,pos:'PF',shooting:68,speed:68,strength:82,defense:74,dribbling:58,jumping:66,height:205},
+    {id:'moore',name:'摩尔',num:4,pos:'SG',shooting:84,speed:86,strength:72,defense:72,dribbling:84,jumping:76,height:185},
+    {id:'campbell',name:'坎普',num:22,pos:'PF',shooting:70,speed:72,strength:84,defense:74,dribbling:62,jumping:74,height:203},
+  ]},
+  {id:'shenzhen',name:'深圳马可波罗',abbr:'深圳',color:'#c41230',players:[
+    {id:'hexi',name:'贺希宁',num:3,pos:'SG',shooting:80,speed:82,strength:76,defense:80,dribbling:80,jumping:78,height:195},
+    {id:'shenkijie2',name:'沈梓捷',num:11,pos:'C',shooting:64,speed:68,strength:86,defense:84,dribbling:48,jumping:82,height:210},
+    {id:'gumingyang',name:'顾全',num:12,pos:'SF',shooting:82,speed:70,strength:78,defense:70,dribbling:68,jumping:66,height:201},
+    {id:'baijintian',name:'白昊天',num:2,pos:'PG',shooting:70,speed:82,strength:66,defense:72,dribbling:82,jumping:70,height:188},
+    {id:'zhoupeng',name:'周鹏',num:9,pos:'PF',shooting:76,speed:68,strength:80,defense:85,dribbling:66,jumping:68,height:206},
+    {id:'salinger',name:'萨林杰',num:0,pos:'PF',shooting:78,speed:72,strength:90,defense:82,dribbling:68,jumping:74,height:206},
+    {id:'sunhuoqin',name:'孙浩钦',num:5,pos:'SG',shooting:72,speed:80,strength:66,defense:68,dribbling:76,jumping:74,height:192},
+  ]},
+  {id:'qingdao',name:'青岛国信海天',abbr:'青岛',color:'#004c97',players:[
+    {id:'yanghanshen',name:'杨瀚森',num:15,pos:'C',shooting:68,speed:60,strength:84,defense:86,dribbling:58,jumping:66,height:216},
+    {id:'wangrh',name:'王睿泽',num:2,pos:'SF',shooting:80,speed:78,strength:76,defense:74,dribbling:74,jumping:78,height:197},
+    {id:'zhaojiayi2',name:'赵嘉义',num:33,pos:'PF',shooting:74,speed:72,strength:78,defense:72,dribbling:66,jumping:74,height:203},
+    {id:'dangmuyi',name:'段昂君',num:3,pos:'PG',shooting:70,speed:84,strength:64,defense:68,dribbling:82,jumping:72,height:185},
+    {id:'pomurray',name:'鲍威尔',num:13,pos:'SG',shooting:84,speed:86,strength:74,defense:74,dribbling:84,jumping:78,height:188},
+    {id:'michl',name:'米切尔',num:1,pos:'PF',shooting:70,speed:74,strength:86,defense:78,dribbling:62,jumping:80,height:206},
+  ]},
+  {id:'fujian',name:'福建浔兴',abbr:'福建',color:'#005eb8',players:[
+    {id:'chenlinjian',name:'陈林坚',num:15,pos:'SF',shooting:88,speed:76,strength:72,defense:66,dribbling:72,jumping:72,height:196},
+    {id:'liyiyang2',name:'黎伊扬',num:3,pos:'PG',shooting:68,speed:86,strength:60,defense:72,dribbling:88,jumping:68,height:183},
+    {id:'young',name:'约瑟夫·杨',num:1,pos:'SG',shooting:86,speed:90,strength:72,defense:66,dribbling:90,jumping:82,height:188},
+    {id:'makar',name:'梅克',num:5,pos:'C',shooting:66,speed:68,strength:84,defense:82,dribbling:50,jumping:78,height:213},
+    {id:'zhuangzhan',name:'黄毅超',num:6,pos:'SG',shooting:74,speed:80,strength:68,defense:68,dribbling:74,jumping:74,height:195},
+    {id:'suimran',name:'孙岩松',num:11,pos:'C',shooting:60,speed:58,strength:84,defense:72,dribbling:42,jumping:60,height:210},
+  ]},
+  {id:'jiangsu',name:'江苏肯帝亚',abbr:'江苏',color:'#003d7c',players:[
+    {id:'wuguanxi2',name:'吴冠希',num:11,pos:'C',shooting:64,speed:62,strength:86,defense:80,dribbling:48,jumping:68,height:210},
+    {id:'liutao',name:'刘志轩',num:7,pos:'SG',shooting:78,speed:72,strength:72,defense:74,dribbling:76,jumping:64,height:194},
+    {id:'cuixialong',name:'崔晓龙',num:5,pos:'PG',shooting:70,speed:84,strength:68,defense:70,dribbling:82,jumping:72,height:186},
+    {id:'majianhao',name:'马建豪',num:1,pos:'SF',shooting:72,speed:76,strength:68,defense:66,dribbling:70,jumping:74,height:200},
+    {id:'blakeney',name:'布莱克尼',num:2,pos:'SG',shooting:88,speed:88,strength:76,defense:70,dribbling:86,jumping:82,height:193},
+  ]},
+  {id:'tongxi',name:'南京头排苏酒',abbr:'南京',color:'#002b5c',players:[
+    {id:'linwei',name:'林葳',num:23,pos:'SG',shooting:86,speed:84,strength:70,defense:68,dribbling:80,jumping:78,height:191},
+    {id:'wanglanjin',name:'王岚嵚',num:8,pos:'PG',shooting:74,speed:86,strength:64,defense:72,dribbling:88,jumping:70,height:183},
+    {id:'bryant',name:'布莱恩特',num:0,pos:'PF',shooting:72,speed:74,strength:84,defense:78,dribbling:64,jumping:80,height:208},
+    {id:'zengfanri',name:'曾繁日',num:15,pos:'C',shooting:58,speed:60,strength:86,defense:74,dribbling:42,jumping:64,height:206},
+    {id:'zhaobaozhen',name:'赵柏清',num:13,pos:'PF',shooting:74,speed:70,strength:80,defense:70,dribbling:62,jumping:72,height:204},
+  ]},
+  {id:'jilin',name:'吉林九台农商',abbr:'吉林',color:'#dd0033',players:[
+    {id:'jiangweize',name:'姜伟泽',num:13,pos:'SG',shooting:88,speed:84,strength:66,defense:68,dribbling:82,jumping:72,height:181},
+    {id:'jiangyuxing',name:'姜宇星',num:5,pos:'SF',shooting:76,speed:82,strength:78,defense:76,dribbling:78,jumping:80,height:193},
+    {id:'lidong',name:'李安',num:12,pos:'C',shooting:64,speed:58,strength:86,defense:76,dribbling:44,jumping:60,height:209},
+    {id:'junior',name:'琼斯',num:55,pos:'SG',shooting:80,speed:88,strength:84,defense:78,dribbling:90,jumping:82,height:193},
+    {id:'zhongChen',name:'钟诚',num:21,pos:'PF',shooting:70,speed:64,strength:84,defense:78,dribbling:58,jumping:62,height:205},
+  ]},
+  {id:'tianjin',name:'天津先行者',abbr:'天津',color:'#003893',players:[
+    {id:'linqian',name:'林庭谦',num:0,pos:'PG',shooting:78,speed:86,strength:66,defense:74,dribbling:88,jumping:74,height:185},
+    {id:'shideshuai',name:'时德帅',num:10,pos:'PF',shooting:74,speed:72,strength:80,defense:74,dribbling:64,jumping:72,height:205},
+    {id:'terry',name:'田雨',num:7,pos:'SF',shooting:76,speed:74,strength:72,defense:68,dribbling:70,jumping:72,height:197},
+    {id:'james',name:'大卫·詹姆斯',num:31,pos:'PF',shooting:76,speed:78,strength:86,defense:80,dribbling:68,jumping:82,height:203},
+    {id:'lairongpei',name:'赖俊豪',num:9,pos:'C',shooting:58,speed:60,strength:82,defense:70,dribbling:40,jumping:64,height:207},
+  ]},
+  {id:'sichuan',name:'四川锦城',abbr:'四川',color:'#003d7c',players:[
+    {id:'zuolian',name:'左朕年',num:13,pos:'SF',shooting:74,speed:74,strength:76,defense:68,dribbling:68,jumping:74,height:200},
+    {id:'hanyu',name:'韩硕',num:33,pos:'PG',shooting:72,speed:72,strength:66,defense:74,dribbling:80,jumping:62,height:185},
+    {id:'jinganyi',name:'景菡一',num:1,pos:'SG',shooting:72,speed:78,strength:70,defense:68,dribbling:74,jumping:74,height:192},
+    {id:'zhangdayu',name:'张大宇',num:15,pos:'C',shooting:62,speed:58,strength:84,defense:74,dribbling:44,jumping:60,height:213},
+    {id:'gordon',name:'高登',num:2,pos:'SG',shooting:84,speed:88,strength:74,defense:68,dribbling:86,jumping:78,height:190},
+  ]},
+  {id:'ningbo',name:'宁波町渥',abbr:'宁波',color:'#1a6dd4',players:[
+    {id:'liyu',name:'李原宇',num:1,pos:'PF',shooting:68,speed:64,strength:82,defense:70,dribbling:54,jumping:62,height:206},
+    {id:'wangchen',name:'王成',num:5,pos:'SF',shooting:68,speed:72,strength:70,defense:66,dribbling:66,jumping:70,height:198},
+    {id:'ninghongyu',name:'宁鸿宇',num:9,pos:'C',shooting:58,speed:56,strength:84,defense:72,dribbling:40,jumping:58,height:210},
+    {id:'mitch',name:'米切尔',num:2,pos:'SG',shooting:76,speed:82,strength:74,defense:72,dribbling:80,jumping:76,height:193},
+    {id:'zhangbiaa',name:'张彪',num:7,pos:'PF',shooting:66,speed:66,strength:78,defense:68,dribbling:56,jumping:64,height:201},
+  ]},
+];
+
+function getAllPlayers(){
+  var all=[];
+  for(var i=0;i<CBA_TEAMS.length;i++){
+    var t=CBA_TEAMS[i];
+    for(var j=0;j<t.players.length;j++){
+      var p=t.players[j];
+      p.teamId=t.id; p.teamName=t.name; p.teamAbbr=t.abbr; p.teamColor=t.color;
+      all.push(p);
+    }
+  }
+  return all;
+}
+
+function getPlayerById(id){
+  for(var i=0;i<CBA_TEAMS.length;i++){
+    var t=CBA_TEAMS[i];
+    for(var j=0;j<t.players.length;j++){
+      if(t.players[j].id===id){
+        var p=t.players[j];
+        p.teamId=t.id; p.teamName=t.name; p.teamAbbr=t.abbr; p.teamColor=t.color;
+        return p;
+      }
+    }
+  }
+  return null;
+}
+
+function getTeams(){return CBA_TEAMS.map(function(t){return{id:t.id,name:t.name,abbr:t.abbr,color:t.color,count:t.players.length}})}
+function getPlayersByTeam(tid){for(var i=0;i<CBA_TEAMS.length;i++){if(CBA_TEAMS[i].id===tid){var t=CBA_TEAMS[i];return t.players.map(function(p){p.teamId=t.id;p.teamName=t.name;p.teamAbbr=t.abbr;p.teamColor=t.color;return p})}}return[]}
+
+// CBA Basketball 1v1 - Web Version
+// Players loaded from players-data.js
+
+// ============ UTILS ============
+function darken(hex,amt){hex=hex.replace('#','');var r=Math.max(0,Math.floor(parseInt(hex.substring(0,2),16)*(1-amt))),g=Math.max(0,Math.floor(parseInt(hex.substring(2,4),16)*(1-amt))),b=Math.max(0,Math.floor(parseInt(hex.substring(4,6),16)*(1-amt)));return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)}
+function rgba(hex,a){hex=hex.replace('#','');return 'rgba('+parseInt(hex.substring(0,2),16)+','+parseInt(hex.substring(2,4),16)+','+parseInt(hex.substring(4,6),16)+','+a+')'}
+
+// ============ GAME ENGINE ============
+// 2D篮球游戏核心引擎 - 侧视图版本
+var COURT_W = 1000
+var COURT_H = 500
+var FLOOR_Y = 420
+var RIM_X = 888
+var RIM_Y = 180
+var RIM_R = 16
+var GRAVITY = 0.45
+
+function GameEngine(canvas, ctx, w, h, opts) {
+  this.canvas = canvas
+  this.ctx = ctx
+  this.w = w
+  this.h = h
+  this.s = Math.min(w / COURT_W, h / COURT_H)
+  this.offX = w / 2 - this._s(COURT_W) / 2
+  this.offY = h / 2 - this._s(COURT_H) / 2
+  this.bgImage = (opts && opts.bgImage) || null
+  this.poss = 0
+  this.score = [0, 0]
+  this.gameOver = false
+  this.winner = -1
+  this.stats = { p1: { pts: 0, blk: 0, stl: 0, reb: 0 }, p2: { pts: 0, blk: 0, stl: 0, reb: 0 } }
+  this.shooting = false
+  this.shotPower = 0
+  this._powPhase = 0
+  this.shotReleased = false
+  this.ballInAir = false
+  this.ballLoose = false
+  this.offInput = { mx: 0, my: 0 }
+  this.defInput = { mx: 0, my: 0 }
+  this.blockAnim = 0
+  this.stealAnim = 0
+  this.driveAnim = 0
+  this.reboundAnim = 0
+  this.scoredAnim = 0
+  this._screenShake = 0
+  this._jumpPhase = 'none'
+  this._jumpY = 0
+  this._jumpVy = 0
+  this._jumpTimer = 0
+  this._jumpType = 'none'
+  this._jumpMx = 0
+  this._jumpMy = 0
+  this._dribbleHand = 0
+  this._dribbleSwitchTimer = 0
+  this.msg = ''
+  this.msgTimer = 0
+  this.shotResult = null
+  this.offEnergy = 100
+  this.defEnergy = 100
+  this.stamina = 100
+  this.shotClockTimer = 0
+  this._particles = []
+  this._trail = []
+  this._scorePopups = []
+  this._grabCooldown = 0
+  this._dribblePhase = 0
+  this._runPhase = 0
+  this._chargePower = 0
+  this._chargeZoneLo = 0.82
+  this._chargeZoneHi = 0.98
+  this._ballRimCooldown = 0
+  this._lastBallY = null
+  this._scoredThisShot = false
+  this._screenShake = 0
+  // Game timer
+  var dur = (opts && opts.gameDuration) ? opts.gameDuration : 120
+  this.gameTime = dur
+  this.gameTimer = dur * 1000
+  // Scoring mode: 'alternate' (换发) or 'keep' (连发)
+  this.scoringMode = (opts && opts.scoringMode) ? opts.scoringMode : 'alternate'
+  this._rimStuckCounter = 0
+  this._commentary = []
+  this._impact = 0
+  this._jumpBallPhase = 'countdown' // countdown | toss | contest | done
+  this._jumpBallTimer = 3000
+  this._init()
+}
+
+GameEngine.prototype._s = function(v) { return v * this.s }
+
+GameEngine.prototype._init = function() {
+  this.ball = { x: this._s(260), y: this._s(350), vx: 0, vy: 0, r: this._s(16), has: true, rot: 0 }
+  this._resetPos()
+}
+
+GameEngine.prototype._resetPos = function() {
+  var offX = this._s(250), offY = this._s(380)
+  var defX = this._s(600), defY = this._s(380)
+  var baseR = this._s(38)
+  var offVis = this.poss === 0 ? this._p1Vis : this._p2Vis
+  var defVis = this.poss === 0 ? this._p2Vis : this._p1Vis
+  var offR = baseR * (offVis ? offVis.size : 1)
+  var defR = baseR * (defVis ? defVis.size : 1)
+  this.off = { x: offX, y: offY, r: offR, mx: 0, my: 0, flash: 0 }
+  this.def = { x: defX, y: defY, r: defR, mx: 0, my: 0, flash: 0 }
+  this.ball.x = this._s(280)
+  this.ball.y = this._s(335)
+  this.ball.vx = 0
+  this.ball.vy = 0
+  this.ball.has = true
+  this.ballInAir = false
+  this.ballLoose = false
+  this.shooting = false
+  this.shotPower = 0
+  this.shotReleased = false
+  this.shotResult = null
+  this._trail = []
+  this._jumpPhase = 'none'
+  this._jumpY = 0
+  this._jumpVy = 0
+  this._jumpTimer = 0
+  this._jumpType = 'none'
+  this._jumpMx = 0
+  this._jumpMy = 0
+  this._rimStuckCounter = 0
+  this._scorePopups = []
+  this._screenShake = 0
+  this._dribbleHand = 0
+  this._dribbleSwitchTimer = 0
+  this._offVX = 0; this._offVY = 0; this._defVX = 0; this._defVY = 0
+}
+
+GameEngine.prototype.setPlayers = function(p1, p2) {
+  this.p1 = p1
+  this.p2 = p2
+  var o = this.poss === 0 ? p1 : p2
+  var d = this.poss === 0 ? p2 : p1
+  this._offSp = 2.5 * (0.6 + (o ? o.speed / 99 : 0.5) * 0.8)
+  this._defSp = 2.5 * (0.6 + (d ? d.speed / 99 : 0.5) * 0.7)
+  this._offSh = o ? o.shooting : 50
+  this._offDr = o ? o.dribbling : 50
+  this._defDf = d ? d.defense : 50
+  this._defJp = d ? d.jumping : 50
+
+  // Compute distinct player visuals
+  this._p1Vis = this._playerVisuals(p1)
+  this._p2Vis = this._playerVisuals(p2)
+
+  // Adjust player radii based on height
+  var baseR = this._s(38)
+  if (this.off) this.off.r = baseR * (this.poss === 0 ? this._p1Vis.size : this._p2Vis.size)
+  if (this.def) this.def.r = baseR * (this.poss === 0 ? this._p2Vis.size : this._p1Vis.size)
+}
+
+GameEngine.prototype._playerVisuals = function(p) {
+  if (!p) return { size: 1.0, build: 1.0, skin: 0, hair: 0, acc: 0 }
+  // Use actual player height if available, fallback to position-based
+  var height = p.height || 195
+  if (!p.height) {
+    var baseHt = 195
+    if (p.pos === 'PG') baseHt = 186; else if (p.pos === 'SG') baseHt = 193
+    else if (p.pos === 'SF') baseHt = 201; else if (p.pos === 'PF') baseHt = 207; else if (p.pos === 'C') baseHt = 213
+    height = baseHt
+  }
+  var size = 0.75 + (height - 175) / 180 * 0.65 // proportional to real height
+
+  // Build from strength
+  var str = p.strength || 50
+  var build = 0.82 + (str / 99) * 0.36
+
+  // Skin tone from name hash + position
+  var skin = (nameSeed % 7) // 0-6: different skin tones
+
+  // Hair style from num
+  var hair = (p.num || 0) % 5 // 0-4: different styles
+
+  // Accessories from position
+  var acc = 0
+  if (p.pos === 'PG' || p.pos === 'SG') acc = 1 // arm sleeve
+  if (p.pos === 'C') acc = 2 // knee pad
+
+  return { size: size, build: build, skin: skin, hair: hair, acc: acc, height: height }
+}
+
+GameEngine.prototype.getOffPlayer = function() { return this.poss === 0 ? this.p1 : this.p2 }
+GameEngine.prototype.getDefPlayer = function() { return this.poss === 0 ? this.p2 : this.p1 }
+
+GameEngine.prototype.getState = function() {
+  var that = this
+  return {
+    score: that.score, poss: that.poss, gameOver: that.gameOver, winner: that.winner,
+    shotClock: Math.max(0, Math.ceil(24 - that.shotClockTimer / 1000)),
+    gameTime: Math.max(0, Math.ceil(that.gameTimer / 1000)),
+    shooting: that.shooting, shotPower: that.shotPower, stats: that.stats,
+    ballLoose: that.ballLoose,
+    chargeZoneLo: that._chargeZoneLo, chargeZoneHi: that._chargeZoneHi,
+    messageText: that.msgTimer > 0 ? that.msg : '',
+    stamina: Math.floor(that.stamina),
+    isDunkLayup: !!that._isDunkLayup,
+    commentary: that._commentary.slice(-3),
+    impact: that._impact,
+    jumpBallPhase: that._jumpBallPhase,
+    jumpBallTimer: Math.ceil(that._jumpBallTimer / 1000),
+  }
+}
+
+// ==================== UPDATE ====================
+GameEngine.prototype.update = function(dt) {
+  if (this.gameOver) return
+  dt = Math.min(dt, 33) * 0.75
+  if (this._impact > 0) this._impact -= dt
+  if (this._screenShake > 0) this._screenShake -= dt
+
+  // Jump ball: 3-2-1 → 比赛开始 → 裁判举手抛球 → 争抢
+  if (this._jumpBallPhase !== 'done') {
+    this._jumpBallTimer -= dt
+    var rx = this._s(500), refHandY = this._s(165)
+
+    if (this._jumpBallPhase === 'countdown') {
+      // 球在裁判手中
+      this.ball.x = rx; this.ball.y = refHandY + this._s(5)
+      this.ball.vx = 0; this.ball.vy = 0; this.ball.has = false; this.ballInAir = false
+      if (this._jumpBallTimer <= 0) {
+        this._jumpBallPhase = 'raise'
+        this._jumpBallTimer = 600
+        this._say('比赛开始！')
+        this._sayCommentary('CBA 1v1 正式开打！')
+      }
+    } else if (this._jumpBallPhase === 'raise') {
+      // 球在裁判手掌中随手上举
+      var prog2 = 1 - (this._jumpBallTimer / 600)
+      this.ball.x = rx
+      this.ball.y = refHandY - prog2 * this._s(40)
+      this.ball.vx = 0; this.ball.vy = 0
+      this.ball.has = false; this.ballInAir = false
+      if (this._jumpBallTimer <= 0) {
+        this._jumpBallPhase = 'toss'
+        this.ball.vy = -6.5
+        this.ball.vx = (Math.random() - 0.5) * 3
+        this.ballInAir = true
+      }
+    } else if (this._jumpBallPhase === 'toss') {
+      this.ball.vy += GRAVITY * (dt / 16) * 0.75
+      this.ball.y += this.ball.vy * (dt / 16)
+      this.ball.x += this.ball.vx * (dt / 16)
+      if (this.ball.x < this._s(10)) { this.ball.x = this._s(10); this.ball.vx = Math.abs(this.ball.vx) * 0.5 }
+      if (this.ball.x > this._s(990)) { this.ball.x = this._s(990); this.ball.vx = -Math.abs(this.ball.vx) * 0.5 }
+      if (this.ball.vy >= 0) this._jumpBallPhase = 'contest'
+    } else if (this._jumpBallPhase === 'contest') {
+      this.ball.vy += GRAVITY * (dt / 16) * 0.75
+      this.ball.y += this.ball.vy * (dt / 16)
+      this.ball.x += this.ball.vx * (dt / 16)
+      if (this.ball.y > this._s(350)) {
+        var dOff = this._dist(this.off, this.ball)
+        var dDef = this._dist(this.def, this.ball)
+        if (dOff < this._s(80) || dDef < this._s(80)) {
+          this.poss = dOff <= dDef ? 0 : 1
+          this.ball.has = true; this.ballInAir = false; this.ballLoose = false
+          this._jumpBallPhase = 'done'; this.shotClockTimer = 0
+          this._resetPos()
+          this._sayCommentary((this.poss === 0 ? (this.p1 ? this.p1.name : 'P1') : (this.p2 ? this.p2.name : 'P2')) + ' 跳到球权！')
+        }
+      }
+    }
+    this._move(dt)
+    // Fall through - game timer and other updates continue
+  }
+
+  // Game timer
+  this.gameTimer -= dt
+  if (this.gameTimer <= 0) {
+    this.gameTimer = 0
+    this.gameOver = true
+    this.winner = this.score[0] > this.score[1] ? 0 : (this.score[1] > this.score[0] ? 1 : -1)
+    return
+  }
+  if (this.msgTimer > 0) this.msgTimer -= dt
+  if (this.blockAnim > 0) this.blockAnim -= dt
+  if (this.stealAnim > 0) this.stealAnim -= dt
+  if (this.driveAnim > 0) this.driveAnim -= dt
+  if (this.reboundAnim > 0) this.reboundAnim -= dt
+  if (this.scoredAnim > 0) this.scoredAnim -= dt
+  if (this._screenShake > 0) this._screenShake -= dt
+  this._updateJump(dt)
+  this._updateScorePopups(dt)
+  // Commentary fade
+  for (var ci = this._commentary.length - 1; ci >= 0; ci--) {
+    this._commentary[ci].life -= dt
+    if (this._commentary[ci].life <= 0) this._commentary.splice(ci, 1)
+  }
+  this.offEnergy = Math.min(100, this.offEnergy + dt * 0.008)
+  this.defEnergy = Math.min(100, this.defEnergy + dt * 0.008)
+  // Stamina: realistic exertion/recovery
+  var moving = Math.abs(this.offInput.mx) > 0.05 || Math.abs(this.offInput.my) > 0.05
+  if (this.ball.has) {
+    if (moving) {
+      this.stamina = Math.max(0, this.stamina - dt * 0.007)
+      this._runPhase += dt * 0.008
+      // Dust particles at feet while running
+      if (Math.random() < 0.3) this._spawnParticles(this.off.x, this._s(FLOOR_Y - 2), 'rgba(180,150,120,0.4)', 1)
+    } else {
+      this.stamina = Math.min(100, this.stamina + dt * 0.010) // 运球静止恢复
+    }
+  } else {
+    if (!moving) {
+      this.stamina = Math.min(100, this.stamina + dt * 0.035) // 无球静止快速恢复
+    } else {
+      this.stamina = Math.max(0, this.stamina - dt * 0.004) // 无球跑动极慢消耗
+    }
+  }
+  this._dribblePhase += dt * 0.0012
+  this.shotClockTimer += dt
+  if (this._grabCooldown > 0) this._grabCooldown -= dt
+  if (this.shotClockTimer >= 24000) this._chg('进攻超时！')
+
+  this._phys(dt)
+  this._move(dt)
+  this._shootUpd(dt)
+  this._checkBallGrab()
+  this._collide()
+  this._win()
+}
+
+GameEngine.prototype._phys = function(dt) {
+  // Dribble hand alternation
+  this._dribbleSwitchTimer += dt
+  if (this._dribbleSwitchTimer > 400) {
+    this._dribbleSwitchTimer = 0
+    this._dribbleHand = this._dribbleHand === 0 ? 1 : (this._dribbleHand === 1 ? -1 : 1)
+  }
+
+  if (!this.ballInAir) {
+    if (this.ball.has) {
+      // Shooting pose: ball at raised shooting hand
+      if (this.shooting || (this.shotReleased && this.shotResult)) {
+        if (this._jumpType === 'dunk') {
+          // 扣篮: 球举在手上方，随跳跃上升到筐上方
+          this.ball.x = this.off.x
+          this.ball.y = this.off.y - this.off.r * 5.5 + this._s(this._jumpY)
+        } else if (this._jumpType === 'layup') {
+          // 上篮: 球前伸，单手挑篮
+          this.ball.x = this.off.x + this.off.r * 0.8
+          this.ball.y = this.off.y - this.off.r * 2.8 + this._s(this._jumpY)
+        } else {
+          this.ball.x = this.off.x + this.off.r * 0.1
+          this.ball.y = this.off.y - this.off.r * 3.2 + this._s(this._jumpY)
+        }
+      } else if (this.driveAnim > 0) {
+        this.ball.x = this.off.x + this.off.r
+        this.ball.y = this.off.y - this.off.r * 1.2
+      } else {
+        // Dribble: ball alternates sides + bounces to floor
+        var handOff = this._dribbleHand * this.off.r * 0.5
+        this.ball.x = this.off.x + this.off.r + handOff
+        var handY = this.off.y - this.off.r * 1.2
+        var floorY = this._s(FLOOR_Y - 14)
+        // Ball bounces hand → floor → hand (triangle wave)
+        var phase = (this._dribblePhase * 3.2) % 1
+        if (phase < 0.45) {
+          this.ball.y = handY + (floorY - handY) * (phase / 0.45)
+        } else if (phase < 0.55) {
+          this.ball.y = floorY
+        } else {
+          this.ball.y = floorY - (floorY - handY) * ((phase - 0.55) / 0.45)
+        }
+      }
+    }
+    return
+  }
+  this.ball.vy += GRAVITY * (dt / 16)
+  this.ball.x += this.ball.vx * (dt / 16)
+  this.ball.y += this.ball.vy * (dt / 16)
+  this.ball.rot += 0.12 * (dt / 16)
+
+  this._trail.push({ x: this.ball.x, y: this.ball.y, life: 300 })
+  if (this._trail.length > 12) this._trail.shift()
+  for (var i = this._trail.length - 1; i >= 0; i--) {
+    this._trail[i].life -= dt
+    if (this._trail[i].life <= 0) this._trail.splice(i, 1)
+  }
+
+  var bx = this.ball.x, by = this.ball.y, br = this.ball.r
+  var rx = this._s(RIM_X), ry = this._s(RIM_Y), rr = this._s(RIM_R)
+  var spd = Math.sqrt(this.ball.vx * this.ball.vx + this.ball.vy * this.ball.vy)
+
+  // Rim collision — generous scoring window
+  var dx = bx - rx, dy = by - ry
+  var dist = Math.sqrt(dx * dx + dy * dy)
+  var collR = rr + br + this._s(2)
+
+  // === SCORE DETECTION (priority, no cooldown) ===
+  // Wide window: ball anywhere in the cylinder above/below rim
+  var inCylinder = Math.abs(dx) < rr * 4.5 && by > ry - this._s(35) && by < ry + this._s(30)
+  // Cross-frame: ball was above rim last frame, now below (or vice versa)
+  var crossedRim = (this._lastBallY && ((this._lastBallY < ry && by >= ry) || (this._lastBallY > ry && by <= ry))) && Math.abs(dx) < rr * 4
+  if ((inCylinder || crossedRim) && this.ballInAir && !this.ball.has && !this._scoredThisShot) {
+    this._scoredThisShot = true
+    this._score()
+    this._lastBallY = null
+    return
+  }
+  this._lastBallY = by
+
+  if (dist < collR && this._ballRimCooldown <= 0) {
+    // Rim bounce only from outside
+    if (by < ry - this._s(6) || Math.abs(dx) > rr * 0.5) {
+      this._rimStuckCounter++
+      if (dist < 0.01) dist = 0.01
+      var nx = dx / dist, ny = dy / dist
+      var dot = this.ball.vx * nx + this.ball.vy * ny
+      this.ball.vx -= 1.9 * dot * nx
+      this.ball.vy -= 1.9 * dot * ny
+      this.ball.vx *= 0.45; this.ball.vy *= 0.45
+      var pushOut = collR - dist + 8
+      this.ball.x += nx * pushOut
+      this.ball.y += ny * pushOut
+      if (this._rimStuckCounter >= 3) {
+        this.ball.vx = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * 5 + 6)
+        this.ball.vy = -(Math.random() * 4 + 4)
+        this._rimStuckCounter = 0
+      } else if (spd < 3.5) {
+        this.ball.vy = -(Math.random() * 3 + 2.5)
+        this.ball.vx = (Math.random() - 0.5) * 4.5
+      }
+      this._ballRimCooldown = 80
+      this._spawnParticles(bx, by, '#ff8c00', 3)
+    }
+  }
+  if (this._ballRimCooldown > 0) this._ballRimCooldown -= dt
+
+  // Slide-off detection
+  if (this._ballRimCooldown <= 0 && dist < collR + this._s(8) && spd < 1.5 && by < ry) {
+    this.ball.vy += 1.5
+    this.ball.vx += (dx > 0 ? 1 : -1) * 2
+  }
+
+  // Backboard collision
+  var bbX = this._s(900), bbW = this._s(12)
+  if (bx > bbX - br - this._s(2) && bx < bbX + bbW + this._s(2) && by > this._s(105) && by < this._s(255)) {
+    if (bx > bbX - this._s(2)) {
+      this.ball.x = bbX - br - this._s(4)
+      this.ball.vx = -Math.abs(this.ball.vx) * 0.55
+      if (Math.abs(this.ball.vx) < 2) this.ball.vx = -(Math.random() * 2.5 + 1.5)
+    }
+    this.ball.vy *= 0.75
+    if (Math.abs(this.ball.vy) < 1) this.ball.vy = (Math.random() - 0.5) * 3 - 1
+    this._spawnParticles(bx, by, '#ffffff', 3)
+  }
+
+  // Floor bounce
+  var fl = this._s(FLOOR_Y - 6)
+  if (by > fl && this.ball.vy > 0) {
+    this.ball.y = fl - br
+    this.ball.vy = -Math.abs(this.ball.vy) * 0.45
+    this.ball.vx *= 0.6
+    if (Math.abs(this.ball.vy) < 0.6) { this.ballInAir = false; this.ballLoose = true }
+  }
+
+  // Wall bounce (no out-of-bounds, ball bounces off screen edges)
+  if (bx < this._s(5)) { this.ball.x = this._s(5) + br; this.ball.vx = Math.abs(this.ball.vx) * 0.6 }
+  if (bx > this._s(940)) { this.ball.x = this._s(940) - br; this.ball.vx = -Math.abs(this.ball.vx) * 0.6 }
+  if (by > this._s(470)) { this.ball.y = this._s(470) - br; this.ball.vy = -Math.abs(this.ball.vy) * 0.5; this.ball.vx *= 0.7 }
+  // Top: open (no bounce, ball can go high)
+
+  // Particles
+  for (var j = this._particles.length - 1; j >= 0; j--) {
+    var pt = this._particles[j]
+    pt.life -= dt
+    pt.x += pt.vx * (dt / 16)
+    pt.y += pt.vy * (dt / 16)
+    if (pt.life <= 0) this._particles.splice(j, 1)
+  }
+}
+
+GameEngine.prototype._move = function(dt) {
+  var maxX = this._s(930), minX = this._s(30)
+  var maxY = this._s(FLOOR_Y - 20), minY = this._s(180)
+  var t = dt / 16
+
+  // --- Initialize velocity state ---
+  if (!this._offVX) { this._offVX = 0; this._offVY = 0; this._defVX = 0; this._defVY = 0 }
+
+  // === OFFENSE: inertia-based movement ===
+  var staminaMod = this.stamina < 20 ? 0.55 + (this.stamina / 20) * 0.45 : 1.0
+  var maxSpd = this._offSp * staminaMod * 0.85
+  if (this.driveAnim > 0) maxSpd = 5.5
+  var accel = maxSpd * 0.12, friction = maxSpd * 0.08
+  var omx = this.offInput.mx, omy = this.offInput.my
+  if (this.driveAnim > 0) omx = omx || 1
+
+  var inAir = this._jumpPhase !== 'none' && this._jumpType === 'shoot'
+  if (inAir) { omx = this._jumpMx; omy = this._jumpMy; accel *= 0.15 }
+
+  // Accelerate toward input direction
+  if (omx !== 0 || omy !== 0) {
+    var om = Math.sqrt(omx * omx + omy * omy) || 1
+    this._offVX += (omx / om) * accel * t
+    this._offVY += (omy / om) * accel * 0.6 * t
+  }
+  // Friction
+  var spd = Math.sqrt(this._offVX * this._offVX + this._offVY * this._offVY)
+  if (spd > 0) {
+    var fricForce = Math.min(friction * t, spd)
+    this._offVX -= (this._offVX / spd) * fricForce
+    this._offVY -= (this._offVY / spd) * fricForce
+  }
+  // Cap speed
+  if (spd > maxSpd) { this._offVX *= maxSpd / spd; this._offVY *= maxSpd / spd }
+  this.off.x += this._offVX * t; this.off.y += this._offVY * t
+
+  // === DEFENSE: smart AI ===
+  var defSpd = this._defSp * 0.8
+  var dAccel = defSpd * 0.14, dFric = defSpd * 0.09
+  var tgtX, tgtY
+  if (this.ballLoose || (!this.ball.has && this.ballInAir)) {
+    tgtX = this.ball.x; tgtY = this.ball.y
+  } else {
+    // Position between offensive player and basket
+    var rimX = this._s(RIM_X), rimY = this._s(RIM_Y + 100)
+    var midX = (this.off.x + rimX) / 2, midY = (this.off.y + rimY) / 2
+    // Offset toward the off player but keep rim behind
+    tgtX = midX + (this.off.x - rimX) * 0.15
+    tgtY = midY + (this.off.y - rimY) * 0.1
+    // Stay within defined defense range
+    var dx2 = this.off.x - this.def.x, dy2 = this.off.y - this.def.y
+    var dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2)
+    if (dist2 < this._s(45)) {
+      tgtX = this.def.x - dx2 * 0.3; tgtY = this.def.y - dy2 * 0.3
+    }
+  }
+  var ddx = tgtX - this.def.x, ddy = tgtY - this.def.y
+  var dd = Math.sqrt(ddx * ddx + ddy * ddy) || 1
+  this._defVX += (ddx / dd) * dAccel * t; this._defVY += (ddy / dd) * dAccel * 0.6 * t
+  var dspd = Math.sqrt(this._defVX * this._defVX + this._defVY * this._defVY)
+  if (dspd > 0) { var df = Math.min(dFric * t, dspd); this._defVX -= (this._defVX / dspd) * df; this._defVY -= (this._defVY / dspd) * df }
+  if (dspd > defSpd) { this._defVX *= defSpd / dspd; this._defVY *= defSpd / dspd }
+  this.def.x += this._defVX * t; this.def.y += this._defVY * t
+
+  // === Auto defense actions ===
+  if (!this.ball.has && !this.ballInAir && this.ballLoose && dd < this._s(50) && Math.random() < 0.03) {
+    this.attemptRebound()
+  }
+  if (this.ball.has && this.poss !== 1 && dist2 < this._s(55) && this.stealAnim <= 0 && this.defEnergy > 25 && Math.random() < 0.008) {
+    this.attemptSteal()
+  }
+  if (this.ballInAir && !this.ball.has && this.ball.vy < 0 && Math.abs(this.ball.x - this.def.x) < this._s(70) && Math.random() < 0.015 && this.defEnergy > 30) {
+    this.attemptBlock()
+  }
+
+  // Clamp positions
+  this.off.x = Math.max(minX, Math.min(maxX, this.off.x))
+  this.off.y = Math.max(minY, Math.min(maxY, this.off.y))
+  this.def.x = Math.max(minX, Math.min(maxX, this.def.x))
+  this.def.y = Math.max(minY, Math.min(maxY, this.def.y))
+
+  // Store AI input for animation
+  this.defInput.mx = ddx / dd; this.defInput.my = ddy / dd
+}
+
+GameEngine.prototype._shootUpd = function(dt) {
+  if (!this.shooting || this.shotReleased) return
+  this._chargePower += dt / 480
+  if (this._chargePower > 1.0) this._chargePower = 1.0
+  this.shotPower = this._chargePower
+
+  // 扣篮/上篮: 进入滞空第一时间灌篮，然后下落
+  if (this._isDunkLayup) {
+    if (this._jumpPhase === 'hang' && this._chargePower > 0.03) {
+      this.shotReleased = true; this.shooting = false
+      this._fire()
+      // 灌篮后立即开始下落
+      this._jumpPhase = 'falling'; this._jumpTimer = 0
+    }
+    return
+  }
+  // 到达满蓄力自动出手
+  if (this._chargePower >= 1.0) this.releaseShoot()
+}
+
+GameEngine.prototype._collide = function() {
+  if (this.stealAnim > 0 && this.ball.has && !this.shooting) {
+    var dx = this.def.x - this.off.x, dy = this.def.y - this.off.y
+    if (Math.sqrt(dx * dx + dy * dy) < this._s(45)) {
+      var c = 0.25 + this._defDf / 99 * 0.35 - this._offDr / 99 * 0.25
+      if (Math.random() < c) {
+        this._chg('抢断成功！')
+        this.stats[this.poss === 0 ? 'p2' : 'p1'].stl++
+        this._say('抢断！')
+        this._spawnParticles(this.ball.x, this.ball.y, '#ffff00', 12)
+      } else { this._say('抢断失败') }
+      this.stealAnim = 0
+    }
+  }
+}
+
+GameEngine.prototype._win = function() {
+  if (this.gameOver) return
+  var d = Math.abs(this.score[0] - this.score[1])
+  if (this.score[0] >= 11 && d >= 2) { this.gameOver = true; this.winner = 0 }
+  else if (this.score[1] >= 11 && d >= 2) { this.gameOver = true; this.winner = 1 }
+}
+
+// ==================== INPUT ====================
+GameEngine.prototype.setOffMove = function(mx, my) { this.offInput.mx = mx || 0; this.offInput.my = my || 0 }
+GameEngine.prototype.setDefMove = function(mx, my) { this.defInput.mx = mx || 0; this.defInput.my = my || 0 }
+
+// ==================== ACTIONS ====================
+GameEngine.prototype.startShoot = function() {
+  if (!this.ball.has || this.shooting || this.ballInAir || this.driveAnim > 0) return
+  this.shooting = true; this.shotReleased = false; this._chargePower = 0; this.shotPower = 0
+  this._isDunkLayup = false; this._fadeaway = false
+
+  // 篮下扣篮/上篮判定: 距篮筐80单位以内 且 体力>60%
+  var distToRim = Math.abs(this.off.x - this._s(RIM_X))
+  var jumpType = 'shoot'
+  if (distToRim < this._s(120) && this.stamina > 40) {
+    var offP = this.getOffPlayer()
+    var str = offP ? (offP.strength || 50) : 50
+    var jmp = offP ? (offP.jumping || 50) : 50
+    var spd = offP ? (offP.speed || 50) : 50
+    var drb = offP ? (offP.dribbling || 50) : 50
+    jumpType = (str + jmp) >= (spd + drb) ? 'dunk' : 'layup'
+    this._isDunkLayup = true
+  }
+
+  // 后仰跳投: 摇杆往远离篮筐方向(左)推
+  if (jumpType === 'shoot' && this.offInput.mx < -0.3) {
+    this._fadeaway = true
+  }
+
+  // 扣篮/上篮: 不需要绿条, 自动蓄力释放
+  if (this._isDunkLayup) {
+    this._chargeZoneLo = 0; this._chargeZoneHi = 0 // 隐藏绿条
+  } else {
+    var sh = this._offSh || 50
+    var hw = 0.15 + (sh / 99) * 0.12
+    this._chargeZoneLo = 0.90 - hw
+    this._chargeZoneHi = 0.90 + hw
+  }
+  this._triggerJump(jumpType)
+}
+
+GameEngine.prototype.releaseShoot = function() {
+  if (!this.shooting || this.shotReleased) return
+  // 扣篮/上篮: 需要至少150ms蓄力, 然后自动释放
+  if (this._isDunkLayup) {
+    if (this._chargePower < 0.06) {
+      this._say('按住蓄力再投！')
+      this._jumpPhase = 'none'; this._jumpY = 0; this._jumpType = 'none'
+      return
+    }
+    return // 等待_shootUpd中滞空自动释放
+  }
+  this.shotReleased = true; this.shooting = false
+  if (this._chargePower < 0.18) {
+    this._say('按住蓄力再投！')
+    this._jumpPhase = 'none'; this._jumpY = 0; this._jumpType = 'none'
+    return
+  }
+  this._fire()
+}
+
+GameEngine.prototype._fire = function() {
+  var isDunk = this._jumpType === 'dunk'
+  var isLayup = this._jumpType === 'layup'
+  var distToRim = Math.abs(this.off.x - this._s(RIM_X))
+  var is3 = !isDunk && !isLayup && (this.off.x < this._s(RIM_X - 290))
+  var offP = this.getOffPlayer()
+  var sh = offP ? (offP.shooting || 50) : 50
+  var sp = offP ? (offP.speed || 50) : 50
+  var st = offP ? (offP.strength || 50) : 50
+  var dr = offP ? (offP.dribbling || 50) : 50
+  var jm = offP ? (offP.jumping || 50) : 50
+  var dd = this._defDist()
+
+  var label, mp, pts
+
+  if (isDunk) {
+    var dunkContest = dd < this._s(30) ? (1 - dd / this._s(30)) * 12 : 0
+    mp = 95 + (st / 99) * 5 + (jm / 99) * 5 - dunkContest
+    mp = Math.max(82, Math.min(99, mp))
+    label = '暴扣！'
+    pts = 2
+    this._sayCommentary(this._commentaryFor('dunk', offP ? offP.name : ''))
+    this._spawnParticles(this._s(RIM_X), this._s(RIM_Y + 25), '#ff6600', 20)
+    this._spawnParticles(this._s(RIM_X), this._s(RIM_Y + 25), '#ffff00', 12)
+    this._spawnParticles(this._s(RIM_X), this._s(RIM_Y + 25), '#ff0000', 8)
+    this._impact = 500
+    this._screenShake = Math.max(this._screenShake, 350)
+    // Confetti on dunk
+    for (var cf = 0; cf < 15; cf++) {
+      this._particles.push({ x: this._s(RIM_X), y: this._s(RIM_Y), vx: (Math.random() - 0.5) * 10, vy: -(Math.random() * 8 + 3), life: 800 + Math.random() * 500, color: ['#ffd700','#ff4444','#00ff88','#4488ff','#ff8800'][Math.floor(Math.random()*5)] })
+    }
+  } else if (isLayup) {
+    var layContest = dd < this._s(35) ? (1 - dd / this._s(35)) * 15 : 0
+    mp = 90 + (sp / 99) * 8 + (dr / 99) * 6 - layContest
+    mp = Math.max(72, Math.min(99, mp))
+    label = '上篮！'
+    pts = 2
+    this._sayCommentary(this._commentaryFor('layup', offP ? offP.name : ''))
+    this._impact = 250
+  } else if (is3) {
+    var t3 = this._timing()
+    var distPenalty = Math.max(0, (distToRim - this._s(290)) / this._s(5) * 1.2)
+    var contest3 = dd < this._s(100) ? (1 - dd / this._s(100)) * 20 + this._defDf / 99 * 10 : 0
+    var faPenalty = this._fadeaway ? 5 : 0
+    mp = t3.basePct + (sh / 99) * 22 - distPenalty - contest3 - faPenalty
+    mp = Math.max(8, Math.min(98, mp))
+    label = this._fadeaway ? '后仰三分！' : t3.label
+    pts = 3
+    if (t3.label === '完美') this._sayCommentary(this._commentaryFor('three', offP ? offP.name : ''))
+    this._impact = 300
+  } else {
+    var t2 = this._timing()
+    var closeBonus = 0
+    if (distToRim < this._s(40)) closeBonus = 38
+    else if (distToRim < this._s(80)) closeBonus = 30
+    else if (distToRim < this._s(140)) closeBonus = 18
+    else if (distToRim < this._s(220)) closeBonus = 8
+    else if (distToRim < this._s(270)) closeBonus = 3
+    var contest2 = dd < this._s(80) ? (1 - dd / this._s(80)) * 20 + this._defDf / 99 * 8 : 0
+    var faPenalty2 = this._fadeaway ? 4 : 0
+    var faBlockResist = this._fadeaway ? contest2 * 0.35 : 0
+    mp = t2.basePct + (sh / 99) * 28 + closeBonus - contest2 + faBlockResist - faPenalty2
+    mp = Math.max(15, Math.min(97, mp))
+    label = this._fadeaway ? '后仰跳投！' : t2.label
+    pts = 2
+  }
+
+  // 绿区释放 + 无贴身防守 = 必中
+  var goodTiming = label === '完美' || label === '不错'
+  var noContest = dd > this._s(45)
+  var autoMake = !isDunk && !isLayup && goodTiming && noContest
+
+  // 绿区释放 → 命中率保底95%
+  if (goodTiming && !isDunk && !isLayup) mp = Math.max(mp, 95)
+
+  var made = autoMake || (Math.random() * 100 < mp)
+
+  // Stamina cost for actions
+  if (isDunk) this.stamina = Math.max(0, this.stamina - 18)
+  else if (isLayup) this.stamina = Math.max(0, this.stamina - 10)
+  else this.stamina = Math.max(0, this.stamina - 5)
+
+  this.ball.has = false; this.ballInAir = true
+  this._grabCooldown = 350
+  this._lastBallY = null
+  this._scoredThisShot = false
+
+  if (isDunk) {
+    // 扣篮: 球悬停在筐上方一瞬，然后猛力砸下
+    this.ball.x = this._s(RIM_X)
+    this.ball.y = this._s(RIM_Y - 18)
+    this.ball.vx = (Math.random() - 0.5) * 0.5
+    this.ball.vy = 8 + (st / 99) * 6  // 强力下砸
+    this._screenShake = Math.max(this._screenShake, 350)
+    if (!made) {
+      this.ball.vy = -(Math.random() * 6 + 3)
+      this.ball.vx = (Math.random() - 0.5) * 6
+    }
+  } else if (isLayup) {
+    // 上篮: 球从指尖柔和挑入篮筐
+    var lx = this.ball.x, ly = this.ball.y
+    var ldx = this._s(RIM_X) - lx
+    var ldy = this._s(RIM_Y - 8) - ly
+    var laySpeed = 4.5 + (dr / 99) * 3
+    var layDist = Math.sqrt(ldx * ldx + ldy * ldy) || 1
+    this.ball.vx = ldx / layDist * laySpeed * 0.6
+    this.ball.vy = ldy / layDist * laySpeed * 0.6 + laySpeed * 0.15
+    if (!made) {
+      this.ball.vx += (Math.random() - 0.5) * 2.5
+      this.ball.vy += (Math.random() - 0.5) * 2
+    }
+  } else {
+    var jumpBoost = (this._jumpPhase === 'rising') ? 3.5 : (this._jumpPhase === 'hang') ? 0 : (this._jumpPhase === 'falling') ? -2 : 0
+    var fadeBoost = this._fadeaway ? 5.5 : 0
+    var sX = this.ball.x, sY = this.ball.y
+    var tgtX = this._s(RIM_X), tgtY = this._s(RIM_Y)
+    var ddx = tgtX - sX, ddy = tgtY - sY
+    var dist2 = Math.sqrt(ddx * ddx + ddy * ddy)
+    var speed = 4 + this.shotPower * 7
+    var time = dist2 / speed
+    this.ball.vx = ddx / time
+    this.ball.vy = ddy / time - 0.5 * GRAVITY * 0.75 * time - jumpBoost - fadeBoost
+    if (!made) {
+      this.ball.vx += (Math.random() - 0.5) * 2.5
+      this.ball.vy += (Math.random() - 0.5) * 2
+    }
+  }
+
+  this.shotResult = { made: made, pts: pts, timing: label }
+  this.shotClockTimer = 0
+  // 投篮/上篮出手后立即开始下落
+  if (!isDunk && !isLayup && this._jumpPhase !== 'none') {
+    this._jumpPhase = 'falling'
+    this._jumpTimer = 0
+    this._fallStart = this._jumpY
+    this._fallDur = 400
+  }
+}
+
+GameEngine.prototype._timing = function() {
+  var p = this.shotPower
+  var lo = this._chargeZoneLo, hi = this._chargeZoneHi
+  var mid = (lo + hi) / 2, hw = Math.max((hi - lo) / 2, 0.01)
+  if (p < 0.20) return { label: '太早', basePct: 35 }
+  if (p < lo) return { label: '早了', basePct: 70 }
+  if (p <= hi || p <= 1.0) {
+    var dist = Math.abs(p - mid) / hw
+    if (dist < 0.55) return { label: '完美', basePct: 99 }
+    if (dist < 0.90) return { label: '不错', basePct: 96 }
+    return { label: '一般', basePct: 88 }
+  }
+  return { label: '太晚', basePct: 50 }
+}
+GameEngine.prototype._defDist = function() {
+  var dx = this.def.x - this.off.x, dy = this.def.y - this.off.y
+  return Math.sqrt(dx * dx + dy * dy)
+}
+GameEngine.prototype._contest = function(d) {
+  if (d > this._s(70)) return 0
+  return (1 - d / this._s(70)) * 30 + this._defDf / 99 * 10
+}
+
+GameEngine.prototype._score = function() {
+  this.ballInAir = false; this.ball.has = false
+  this.ball.x = this._s(RIM_X); this.ball.y = this._s(RIM_Y + 25)
+  this.ball.vx = 0; this.ball.vy = 0
+  this._rimStuckCounter = 0
+  // Prevent rim collision from re-triggering on the stationary ball
+  this._ballRimCooldown = 2000
+  if (this.shotResult && this.shotResult.made) {
+    this.score[this.poss] += this.shotResult.pts
+    this.stats[this.poss === 0 ? 'p1' : 'p2'].pts += this.shotResult.pts
+    this.scoredAnim = 1200
+    this._say(this.shotResult.timing + '！+' + this.shotResult.pts + '分')
+    this._spawnParticles(this._s(RIM_X), this._s(RIM_Y + 30), '#ffd700', 20)
+    this._scorePopups.push({ x: this._s(RIM_X), y: this._s(RIM_Y), text: '+' + this.shotResult.pts, life: 1200, maxLife: 1200 })
+    this._screenShake = 180
+    var that = this
+    setTimeout(function() {
+      // Swap possession for alternate mode
+      if (that.scoringMode !== 'keep') {
+        that.poss = that.poss === 0 ? 1 : 0
+      }
+      that._resetPos()
+      that.shotClockTimer = 0
+      that.shotResult = null
+      that.ballInAir = false
+      that.ballLoose = false
+      that.stealAnim = 0; that.blockAnim = 0; that.driveAnim = 0
+      that.scoredAnim = 0
+      that.offEnergy = Math.min(100, that.offEnergy + 30)
+      that.defEnergy = Math.min(100, that.defEnergy + 30)
+      var o = that.poss === 0 ? that.p1 : that.p2
+      var d = that.poss === 0 ? that.p2 : that.p1
+      that._offSp = 2.5 * (0.6 + (o ? o.speed / 99 : 0.5) * 0.8)
+      that._defSp = 2.5 * (0.6 + (d ? d.speed / 99 : 0.5) * 0.7)
+      that._offSh = o ? o.shooting : 50
+      that._offDr = o ? o.dribbling : 50
+      that._defDf = d ? d.defense : 50
+      that._defJp = d ? d.jumping : 50
+    }, 1200)
+  } else {
+    this._say('打铁！抢篮板！')
+    this._spawnParticles(this.ball.x, this.ball.y, '#ffffff', 8)
+    this.ball.x = this._s(RIM_X) + (Math.random() - 0.5) * this._s(100)
+    this.ball.y = this._s(RIM_Y + 40)
+    this.ball.vx = (Math.random() - 0.5) * 5
+    this.ball.vy = Math.random() * 2 - 4
+    this.ballInAir = true
+    this.shotResult = null
+  }
+}
+
+GameEngine.prototype._chg = function(reason) {
+  if (this.scoredAnim > 0) return
+  var that = this
+  if (reason) that._say(reason)
+  setTimeout(function() {
+    that.poss = that.poss === 0 ? 1 : 0
+    that._resetPos()
+    that.shotClockTimer = 0
+    that.shotResult = null
+    that.ballInAir = false
+    that.ballLoose = false
+    that.stealAnim = 0; that.blockAnim = 0; that.driveAnim = 0
+    that.offEnergy = Math.min(100, that.offEnergy + 30)
+    that.defEnergy = Math.min(100, that.defEnergy + 30)
+    var o = that.poss === 0 ? that.p1 : that.p2
+    var d = that.poss === 0 ? that.p2 : that.p1
+    that._offSp = 2.5 * (0.6 + (o ? o.speed / 99 : 0.5) * 0.8)
+    that._defSp = 2.5 * (0.6 + (d ? d.speed / 99 : 0.5) * 0.7)
+    that._offSh = o ? o.shooting : 50
+    that._offDr = o ? o.dribbling : 50
+    that._defDf = d ? d.defense : 50
+    that._defJp = d ? d.jumping : 50
+  }, 800)
+}
+
+GameEngine.prototype._say = function(t) { this.msg = t; this.msgTimer = 2000 }
+GameEngine.prototype.jumpBallJump = function() {
+  if (this._jumpBallPhase === 'done') return
+  if (this._jumpPhase !== 'none') return
+  this._jumpPhase = 'crouch'
+  this._jumpTimer = 0; this._jumpY = 0
+  this._jumpType = 'jumpball'
+}
+GameEngine.prototype._sayCommentary = function(t) {
+  this._commentary.push({ text: t, time: Date.now(), life: 4000 })
+  if (this._commentary.length > 5) this._commentary.shift()
+}
+
+GameEngine.prototype._commentaryFor = function(event, name) {
+  var pool = {
+    dunk: [
+      name + ' 腾空而起！暴力灌筐！',
+      name + ' 飞身暴扣！势大力沉！',
+      '天哪！' + name + ' 单手劈扣！',
+      name + ' 高高跃起，狠狠砸进篮筐！',
+      '太残暴了！' + name + ' 的扣篮！',
+    ],
+    layup: [
+      name + ' 轻盈上篮，漂亮！',
+      name + ' 巧妙挑篮得手！',
+      '好球！' + name + ' 的上篮！',
+    ],
+    three: [
+      '三分命中！' + name + ' 远程发炮！',
+      name + ' 三分线外手起刀落！',
+      'BANG！' + name + ' 三分入网！',
+    ],
+    steal: [
+      '抢断！' + name + ' 快手夺球！',
+      name + ' 闪电抢断！球权转换！',
+    ],
+    block: [
+      name + ' 送上火锅！拒绝得分！',
+      name + ' 劈头盖脸的盖帽！',
+      '钉板大帽！' + name + ' 守护篮下！',
+    ],
+    score: [
+      '球进了！' + name + ' 拿下关键分！',
+      name + ' 稳稳命中！',
+      '好球！比分来到 ' + this.score[0] + '-' + this.score[1],
+    ],
+  }
+  var list = pool[event]
+  if (!list) return
+  return list[Math.floor(Math.random() * list.length)]
+}
+
+GameEngine.prototype._updateJump = function(dt) {
+  if (this._jumpPhase === 'none') return
+  this._jumpTimer += dt
+
+  // Easing functions
+  var easeOut = function(t) { return 1 - Math.pow(1 - t, 3) }
+  var easeIn = function(t) { return t * t * t }
+
+  if (this._jumpPhase === 'crouch') {
+    var cd = 80, cdepth = 8
+    if (this._jumpType === 'dunk') { cd = 80; cdepth = 30 }
+    else if (this._jumpType === 'layup') { cd = 70; cdepth = 12 }
+    else if (this._jumpType === 'block') { cd = 40; cdepth = 6 }
+    var prog = Math.min(1, this._jumpTimer / cd)
+    this._jumpY = cdepth * easeIn(prog)
+    if (prog >= 1) {
+      this._jumpPhase = 'rising'
+      this._jumpTimer = 0
+      this._jumpStart = cdepth
+      this._jumpPeak = this._jumpType === 'dunk' ? -220 : this._jumpType === 'block' ? -100 : -85
+      this._jumpRiseDur = this._jumpType === 'dunk' ? 420 : this._jumpType === 'block' ? 220 : 380
+    }
+  } else if (this._jumpPhase === 'rising') {
+    var rProg = Math.min(1, this._jumpTimer / this._jumpRiseDur)
+    this._jumpY = this._jumpStart + (this._jumpPeak - this._jumpStart) * easeOut(rProg)
+    if (rProg >= 1) {
+      this._jumpPhase = 'hang'
+      this._jumpTimer = 0
+    }
+  } else if (this._jumpPhase === 'hang') {
+    var hd = this._jumpType === 'dunk' ? 120 : this._jumpType === 'block' ? 30 : 50
+    if (this._jumpTimer >= hd) {
+      this._jumpPhase = 'falling'
+      this._jumpTimer = 0
+      this._fallStart = this._jumpY
+      this._fallDur = this._jumpType === 'dunk' ? 380 : this._jumpType === 'block' ? 180 : 420
+    }
+  } else if (this._jumpPhase === 'falling') {
+    var fProg = Math.min(1, this._jumpTimer / this._fallDur)
+    this._jumpY = this._fallStart + (0 - this._fallStart) * easeIn(fProg)
+    if (fProg >= 1) {
+      this._jumpY = 0
+      this._jumpPhase = 'none'
+      this._jumpTimer = 0
+      this._jumpType = 'none'
+    }
+  }
+}
+
+GameEngine.prototype._triggerJump = function(type) {
+  if (this._jumpPhase !== 'none') return
+  this._jumpPhase = 'crouch'
+  this._jumpTimer = 0
+  this._jumpY = 0
+  this._jumpVy = 0
+  this._jumpType = type
+  // Store pre-jump momentum: during air phase, player can't change direction
+  if (type === 'shoot') {
+    this._jumpMx = this.offInput.mx
+    this._jumpMy = this.offInput.my
+  } else {
+    this._jumpMx = this.defInput.mx
+    this._jumpMy = this.defInput.my
+  }
+}
+
+GameEngine.prototype._updateScorePopups = function(dt) {
+  for (var i = this._scorePopups.length - 1; i >= 0; i--) {
+    var p = this._scorePopups[i]
+    p.life -= dt
+    p.y -= 1.2 * (dt / 16)
+    if (p.life <= 0) this._scorePopups.splice(i, 1)
+  }
+}
+
+GameEngine.prototype._spawnParticles = function(x, y, color, count) {
+  for (var i = 0; i < count; i++) {
+    this._particles.push({
+      x: x, y: y,
+      vx: (Math.random() - 0.5) * 6,
+      vy: (Math.random() - 0.5) * 6 - 2,
+      life: 400 + Math.random() * 300,
+      color: color
+    })
+  }
+}
+
+GameEngine.prototype.attemptDrive = function() {
+  if (!this.ball.has || this.shooting || this.driveAnim > 0 || this.offEnergy < 30) { if (this.offEnergy < 30) this._say('体力不足'); return }
+  // Check for dunk/layup opportunity
+  var dist2Rim = Math.abs(this.off.x - this._s(RIM_X))
+  var offP = this.poss === 0 ? this.p1 : this.p2
+  var canDunk = dist2Rim < this._s(170) && offP && offP.jumping >= 70
+  var canLayup = dist2Rim < this._s(170)
+
+  if (canDunk) {
+    this._doDunk(offP)
+    return
+  } else if (canLayup) {
+    this._doLayup(offP)
+    return
+  }
+
+  this.driveAnim = 600; this.offEnergy -= 30; this.stamina = Math.max(0, this.stamina - 12); this._say('突破！')
+  this._spawnParticles(this.off.x, this.off.y, '#0088ff', 10)
+  var d = this._defDist()
+  if (d < this._s(35)) {
+    var c = 0.35 + (this._offSp / 5) * 0.35 - this._defDf / 99 * 0.25
+    if (Math.random() > c) { this._say('突破被阻！'); this.driveAnim = 200; var that = this; setTimeout(function() { that._chg('进攻犯规！') }, 300) }
+  }
+}
+
+GameEngine.prototype._doDunk = function(player) {
+  this.driveAnim = 700; this.offEnergy -= 35; this.stamina = Math.max(0, this.stamina - 15)
+  this._triggerJump('dunk')
+  this._say('🏀 扣篮！')
+  this._sfx('score')
+  var that = this
+  setTimeout(function() {
+    var made = Math.random() < 0.95
+    that._finishDunkLayup(made, 2, player && player.jumping >= 85 ? '暴扣！！' : '扣篮')
+  }, 480)
+}
+
+GameEngine.prototype._doLayup = function(player) {
+  this.driveAnim = 550; this.offEnergy -= 22; this.stamina = Math.max(0, this.stamina - 10)
+  this._triggerJump('layup')
+  this._say('上篮！')
+  var that = this
+  setTimeout(function() {
+    var made = Math.random() < 0.88
+    that._finishDunkLayup(made, 2, '上篮')
+  }, 400)
+}
+
+GameEngine.prototype._finishDunkLayup = function(made, pts, label) {
+  this.ball.has = false; this.ballInAir = true; this._grabCooldown = 250
+  this.ball.x = this._s(RIM_X - 3); this.ball.y = this._s(RIM_Y + 3)
+  this.ball.vx = 0; this.ball.vy = 2
+  this.shotClockTimer = 0; this.shotResult = { made: made, pts: pts, timing: label }
+  this.scoredAnim = 1100; this._screenShake = 200
+  this._spawnParticles(this._s(RIM_X), this._s(RIM_Y + 30), '#ffd700', 28)
+  this._scorePopups.push({ x: this._s(RIM_X), y: this._s(RIM_Y), text: '+' + pts, life: 1200, maxLife: 1200 })
+  if (made) {
+    this.score[this.poss] += pts
+    if (this.poss === 0) this.stats.p1.pts += pts; else this.stats.p2.pts += pts
+    this._say(label + '！+' + pts + '分')
+    setTimeout(this._sfx.bind(this, 'crowd'), 300)
+  } else {
+    this._say('失手！')
+    this._sfx('bounce')
+    this.ball.x = this._s(RIM_X) + (Math.random() - 0.5) * this._s(80)
+    this.ball.vy = -(Math.random() * 3 + 2)
+    this.ball.vx = (Math.random() - 0.5) * 5
+    this.ballInAir = true; this.shotResult = null
+  }
+  var that = this
+  setTimeout(function() {
+    that.ballInAir = false; that.ball.has = false
+    that.ball.x = that._s(RIM_X); that.ball.y = that._s(RIM_Y + 25)
+    that.ball.vx = 0; that.ball.vy = 0; that._ballRimCooldown = 2000
+    setTimeout(function() {
+      if (that.scoringMode !== 'keep') { that.poss = that.poss === 0 ? 1 : 0 }
+      that._resetPos(); that.shotClockTimer = 0; that.shotResult = null
+      that.ballInAir = false; that.ballLoose = false
+      that.stealAnim = 0; that.blockAnim = 0; that.driveAnim = 0; that.scoredAnim = 0
+    }, 1100)
+  }, 600)
+}
+
+GameEngine.prototype.attemptSteal = function() {
+  if (!this.ball.has || this.shooting || this.stealAnim > 0 || this.defEnergy < 20) { if (this.defEnergy < 20) this._say('体力不足'); return }
+  this.stealAnim = 400; this.defEnergy -= 20; this.stamina = Math.max(0, this.stamina - 8)
+  var dx = this.def.x - this.off.x, dy = this.def.y - this.off.y
+  var dist = Math.sqrt(dx * dx + dy * dy)
+  if (dist < this._s(70)) {
+    var c = (dist < this._s(50) ? 0.3 : 0.12) + this._defDf / 99 * 0.35 - this._offDr / 99 * 0.3
+    if (Math.random() < c) {
+      this._chg('抢断成功！')
+      this.stats[this.poss === 0 ? 'p2' : 'p1'].stl++
+      this._say('抢断成功！')
+      this._sayCommentary(this._commentaryFor('steal', this.getDefPlayer() ? this.getDefPlayer().name : ''))
+      this._impact = 100
+      this._spawnParticles(this.ball.x, this.ball.y, '#ffff00', 15)
+      return
+    }
+  }
+  this._say('抢断失败')
+}
+
+GameEngine.prototype.attemptBlock = function() {
+  if (!this.ballInAir || this.blockAnim > 0 || this.defEnergy < 25) { if (!this.ballInAir) this._say('等投篮再盖帽'); else this._say('体力不足'); return }
+  this.blockAnim = 500; this.defEnergy -= 25; this.stamina = Math.max(0, this.stamina - 12)
+  this._triggerJump('block')
+  this._screenShake = Math.max(this._screenShake, 120)
+  var dx = this.def.x - this.ball.x, dy = this.def.y - this.ball.y
+  var dist = Math.sqrt(dx * dx + dy * dy)
+  if (dist < this._s(80) && this.ball.vy < 0) {
+    var c = 0.15 + this._defDf / 99 * 0.25 + this._defJp / 99 * 0.2
+    if (Math.random() < c) {
+      this.ball.vy = Math.abs(this.ball.vy) * 1.5
+      this.ball.vx = (Math.random() - 0.5) * 8
+      this.shotResult = null
+      this._say('盖帽！')
+      this._sayCommentary(this._commentaryFor('block', this.getDefPlayer() ? this.getDefPlayer().name : ''))
+      this._impact = 200
+      this._spawnParticles(this.ball.x, this.ball.y, '#ff4444', 18)
+      this.stats[this.poss === 0 ? 'p2' : 'p1'].blk++
+      var that = this
+      setTimeout(function() { if (that.ballInAir) that._chg('盖帽出界！') }, 2000)
+      return
+    }
+  }
+  this._say('盖帽失败')
+}
+
+GameEngine.prototype.attemptRebound = function() {
+  if (this.ball.has) return
+  var dOff = this._dist(this.off, this.ball)
+  var dDef = this._dist(this.def, this.ball)
+  var grabRange = this._s(70)
+  if (dOff < grabRange && dOff <= dDef) { this._doRebound(this.poss); return }
+  if (dDef < grabRange && dDef < dOff) { this._doRebound(1 - this.poss); return }
+  this._say('太远了，靠近点！')
+}
+
+GameEngine.prototype._checkBallGrab = function() {
+  if (this.ball.has || this.scoredAnim > 0) return
+  // Aggressive ground-ball pickup: ball on floor always grabbable
+  if (!this.ballInAir && !this.ballLoose) this.ballLoose = true
+  if (!this.ballInAir && !this.ballLoose) return
+  var dOff = this._dist(this.off, this.ball)
+  var dDef = this._dist(this.def, this.ball)
+  var range = this._s(65)
+  if (dOff < range && dOff <= dDef) { this._doRebound(this.poss); return }
+  if (dDef < range && dDef < dOff) { this._doRebound(1 - this.poss); return }
+}
+
+GameEngine.prototype._dist = function(a, b) {
+  var dx = a.x - b.x, dy = a.y - b.y
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+GameEngine.prototype._doRebound = function(who) {
+  this.ballLoose = false; this.ball.has = true; this.ballInAir = false
+  this.reboundAnim = 400
+  var statKey = who === 0 ? 'p1' : 'p2'
+  this.stats[statKey].reb++
+  this.poss = who; this.shotClockTimer = 0; this.shotResult = null
+  this._spawnParticles(this.ball.x, this.ball.y, '#00ff88', 12)
+  var pname = who === 0 ? (this.p1 ? this.p1.name : 'P1') : (this.p2 ? this.p2.name : 'P2')
+  this._say(pname + ' 抢到篮板！')
+  var o = this.poss === 0 ? this.p1 : this.p2
+  var d = this.poss === 0 ? this.p2 : this.p1
+  this._offSp = 2.5 * (0.6 + (o ? o.speed / 99 : 0.5) * 0.8)
+  this._defSp = 2.5 * (0.6 + (d ? d.speed / 99 : 0.5) * 0.7)
+  this._offSh = o ? o.shooting : 50
+  this._offDr = o ? o.dribbling : 50
+  this._defDf = d ? d.defense : 50
+  this._defJp = d ? d.jumping : 50
+}
+
+// ==================== RENDER ====================
+GameEngine.prototype.render = function() {
+  var ctx = this.ctx
+  if (!ctx) return
+  var w = this.w, h = this.h
+
+  // Screen shake
+  var shakeX = 0, shakeY = 0
+  if (this._screenShake > 0) {
+    var intensity = this._screenShake / 200
+    shakeX = (Math.random() - 0.5) * this._s(8) * intensity
+    shakeY = (Math.random() - 0.5) * this._s(8) * intensity
+  }
+  ctx.save()
+  ctx.translate(shakeX, shakeY)
+
+  // Dynamic team background
+  var offP = this.poss === 0 ? this.p1 : this.p2
+  var bgTc = offP ? (offP.teamColor || '#1a6dd4') : '#1a6dd4'
+  var bgGrad = ctx.createLinearGradient(0, 0, 0, h)
+  bgGrad.addColorStop(0, darken(bgTc, 0.85))
+  bgGrad.addColorStop(0.7, darken(bgTc, 0.6))
+  bgGrad.addColorStop(1, darken(bgTc, 0.2))
+  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h)
+  // Jersey pattern
+  ctx.fillStyle = 'rgba(255,255,255,0.02)'
+  for (var si = 0; si < w; si += this._s(40)) { ctx.fillRect(si, 0, this._s(20), h) }
+
+  this._drawCourt(ctx)
+  if (this._jumpBallPhase !== 'done') this._drawReferee(ctx)
+  this._drawBallShadow(ctx)
+  this._drawPlayers(ctx)
+  this._drawBall(ctx)
+  this._drawParticles(ctx)
+  this._drawScorePopups(ctx)
+  this._drawUI(ctx)
+  ctx.restore()
+}
+
+GameEngine.prototype._drawCourt = function(ctx) {
+  var a = 0.62
+  var fy = this._s(FLOOR_Y)
+  var offP = this.poss === 0 ? this.p1 : this.p2
+  var tc = offP ? (offP.teamColor || '#1a6dd4') : '#1a6dd4'
+
+  // Arena wall (观众席背景)
+  var wg = ctx.createLinearGradient(0, 0, 0, fy)
+  wg.addColorStop(0, 'rgba(6,4,15,0.94)')
+  wg.addColorStop(0.5, 'rgba(15,10,28,0.65)')
+  wg.addColorStop(1, 'rgba(24,16,36,0.22)')
+  ctx.fillStyle = wg; ctx.fillRect(0, 0, this.w, fy)
+
+  // Arena roof beams
+  for (var bi = 0; bi < 5; bi++) {
+    var bx2 = this._s(30 + bi * 220)
+    ctx.fillStyle = 'rgba(18,14,30,0.55)'
+    ctx.fillRect(bx2, 0, this._s(4), fy)
+  }
+
+  // Crowd (performance: 2 rows, simplified)
+  var crowdTime = Date.now() * 0.0004
+  var crowdColors = ['rgba(50,40,70,0.55)', 'rgba(60,35,50,0.5)', 'rgba(40,45,60,0.55)', 'rgba(55,30,55,0.5)', 'rgba(45,40,55,0.5)']
+  for (var row = 0; row < 2; row++) {
+    var rowY2 = this._s(10 + row * 22)
+    var rowR2 = this._s(6 - row * 0.5)
+    var rowCount = 16 - row * 2
+    var gap = 1000 / rowCount
+    for (var ci2 = 0; ci2 < rowCount; ci2++) {
+      var cx4 = this._s(20 + ci2 * gap)
+      ctx.fillStyle = crowdColors[(ci2 + row * 3) % 5]
+      ctx.beginPath()
+      ctx.arc(cx4 + Math.sin(crowdTime * 2 + ci2) * this._s(1.5), rowY2 + Math.sin(crowdTime * 3 + ci2) * this._s(0.8), rowR2, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+
+  // Floor
+  var fg = ctx.createLinearGradient(0, fy, 0, this.h)
+  fg.addColorStop(0, this._rgba('#c89450', a)); fg.addColorStop(0.3, this._rgba('#b07838', a))
+  fg.addColorStop(1, this._rgba('#7a4520', a))
+  ctx.fillStyle = fg; ctx.fillRect(0, fy, this.w, this.h - fy)
+
+  // Wood grain
+  for (var gx = 0; gx < this.w; gx += this._s(55)) {
+    ctx.fillStyle = (Math.floor(gx / this._s(55)) % 2) ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.025)'
+    ctx.fillRect(gx, fy, this._s(55), this.h - fy)
+  }
+
+  // === Court lines (side-view perspective) ===
+  // 3-point arc (shallow curve on floor)
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = this._s(2)
+  ctx.setLineDash([this._s(8), this._s(4)])
+  ctx.beginPath()
+  var arcCx = this._s(RIM_X), arcCy = fy
+  var arcRx = this._s(290), arcRy = this._s(15)
+  ctx.ellipse(arcCx, arcCy + this._s(2), arcRx, arcRy, 0, Math.PI, 0, false)
+  ctx.stroke()
+  ctx.setLineDash([])
+
+  // Free throw line (short vertical mark)
+  var ftX = this._s(620)
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = this._s(2)
+  ctx.beginPath(); ctx.moveTo(ftX, fy); ctx.lineTo(ftX, fy + this._s(40)); ctx.stroke()
+
+  // === Ad boards (场边广告牌) ===
+  var adY = fy - this._s(1)
+  ctx.fillStyle = 'rgba(0,0,0,0.55)'
+  ctx.fillRect(0, adY, this.w, this._s(7))
+  for (var ai = 0; ai < 6; ai++) {
+    var ax2 = this._s(25 + ai * 170)
+    ctx.fillStyle = ai % 2 ? 'rgba(255,255,255,0.12)' : 'rgba(255,200,0,0.1)'
+    ctx.fillRect(ax2, adY, this._s(150), this._s(7))
+  }
+
+  // Shot clock above backboard
+  var scX = this._s(890), scY = this._s(103), scW = this._s(32), scH = this._s(17)
+  ctx.fillStyle = '#0a0a0a'
+  ctx.fillRect(scX, scY, scW, scH)
+  ctx.strokeStyle = '#333'; ctx.lineWidth = this._s(1.5)
+  ctx.strokeRect(scX, scY, scW, scH)
+  var scRemain = Math.max(0, Math.ceil(24 - this.shotClockTimer / 1000))
+  ctx.fillStyle = scRemain <= 5 ? '#ff1100' : '#ff3300'
+  ctx.font = 'bold ' + Math.floor(this._s(12)) + 'px monospace'
+  ctx.textAlign = 'center'
+  ctx.fillText(scRemain, scX + scW / 2, scY + scH * 0.78)
+
+  // Pole
+  var pg = ctx.createLinearGradient(this._s(930), 0, this._s(937), 0)
+  pg.addColorStop(0, '#666'); pg.addColorStop(0.5, '#999'); pg.addColorStop(1, '#444')
+  ctx.fillStyle = pg; ctx.fillRect(this._s(930), this._s(110), this._s(7), fy - this._s(110))
+  // Pole base plate
+  ctx.fillStyle = '#3a3a3a'
+  ctx.fillRect(this._s(925), fy - this._s(6), this._s(17), this._s(8))
+  ctx.fillStyle = '#555'
+  ctx.fillRect(this._s(927), fy - this._s(5), this._s(13), this._s(7))
+
+  // Glass backboard
+  ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(this._s(898), this._s(115), this._s(13), this._s(140))
+  ctx.strokeStyle = '#222'; ctx.lineWidth = this._s(2); ctx.strokeRect(this._s(898), this._s(115), this._s(13), this._s(140))
+  ctx.strokeStyle = '#d00'; ctx.lineWidth = this._s(1.5); ctx.strokeRect(this._s(900), this._s(152), this._s(7), this._s(48))
+
+  // Backboard with glass effect
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'
+  ctx.fillRect(this._s(898), this._s(118), this._s(14), this._s(142))
+  ctx.strokeStyle = '#222'
+  ctx.lineWidth = 2.5
+  ctx.strokeRect(this._s(898), this._s(118), this._s(14), this._s(142))
+  // Inner target square
+  ctx.strokeStyle = '#e00000'
+  ctx.lineWidth = 2
+  ctx.strokeRect(this._s(900), this._s(155), this._s(8), this._s(50))
+
+  var rimX = this._s(RIM_X), rimY = this._s(RIM_Y), rimWR = this._s(RIM_R), rimHR = this._s(RIM_R) * 0.28
+
+  // ---- Rim shadow on backboard ----
+  ctx.fillStyle = 'rgba(0,0,0,0.12)'
+  ctx.beginPath(); ctx.ellipse(rimX + this._s(1), rimY + this._s(3), rimWR * 1.05, rimHR * 1.2, 0, 0, Math.PI * 2); ctx.fill()
+
+  // ---- Rim glow when scored ----
+  if (this.scoredAnim > 0) {
+    var glowAlpha = this.scoredAnim / 1200 * 0.3
+    ctx.strokeStyle = 'rgba(255,200,0,' + glowAlpha + ')'
+    ctx.lineWidth = this._s(6)
+    ctx.beginPath(); ctx.ellipse(rimX, rimY, rimWR + this._s(3), rimHR + this._s(1.5), 0, 0, Math.PI * 2); ctx.stroke()
+  }
+
+  // ---- 3D Rim (side-view ellipse) ----
+  // Outer ring
+  ctx.strokeStyle = '#772211'; ctx.lineWidth = this._s(3.5)
+  ctx.beginPath(); ctx.ellipse(rimX, rimY, rimWR + this._s(0.5), rimHR + this._s(0.2), 0, 0, Math.PI * 2); ctx.stroke()
+  // Main rim ring (red-orange gradient)
+  var rimGrad = ctx.createLinearGradient(rimX, rimY - rimHR - this._s(1), rimX, rimY + rimHR + this._s(1))
+  rimGrad.addColorStop(0, '#ff5533'); rimGrad.addColorStop(0.3, '#ff2200'); rimGrad.addColorStop(0.6, '#dd1100'); rimGrad.addColorStop(1, '#990000')
+  ctx.strokeStyle = rimGrad; ctx.lineWidth = this._s(2.5)
+  ctx.beginPath(); ctx.ellipse(rimX, rimY, rimWR, rimHR, 0, 0, Math.PI * 2); ctx.stroke()
+  // Inner highlight
+  ctx.strokeStyle = 'rgba(255,180,140,0.5)'; ctx.lineWidth = this._s(0.8)
+  ctx.beginPath(); ctx.ellipse(rimX - this._s(0.5), rimY - this._s(0.5), rimWR - this._s(0.6), rimHR - this._s(0.3), 0, -Math.PI * 0.55, -Math.PI * 0.05); ctx.stroke()
+
+  // ---- Net (short, thick visible white cords) ----
+  var netDepth = this._s(38)
+  var netBotX = rimX, netBotY = rimY + netDepth
+  var netBotW = this._s(14)
+
+  // Drop shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.08)'
+  ctx.beginPath()
+  ctx.moveTo(rimX - rimWR, rimY); ctx.lineTo(netBotX - netBotW, netBotY)
+  ctx.lineTo(netBotX + netBotW, netBotY); ctx.lineTo(rimX + rimWR, rimY)
+  ctx.closePath(); ctx.fill()
+
+  var swish = 0
+  if (this.scoredAnim > 0) {
+    swish = Math.sin(this.scoredAnim * 0.06) * this._s(5) * Math.min(1, this.scoredAnim / 700)
+  }
+
+  var netCords = 10
+  // Horizontal rings (4 levels, getting narrower)
+  for (var ringLvl = 0; ringLvl < 4; ringLvl++) {
+    var frac = (ringLvl + 1) / 5
+    var ringY = rimY + netDepth * frac
+    var ringWR = rimWR * (1 - frac * 0.55)
+    var ringHR = rimHR * (1 - frac * 0.6)
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.45 + 0.15 * (1 - frac)) + ')'
+    ctx.lineWidth = this._s(1.0)
+    ctx.beginPath(); ctx.ellipse(rimX, ringY, ringWR, Math.max(ringHR, this._s(2)), 0, 0, Math.PI * 2); ctx.stroke()
+  }
+
+  // Vertical cords (thick white lines)
+  for (var ci = 0; ci < netCords; ci++) {
+    var ca = (ci / netCords) * Math.PI * 2
+    var topX = rimX + Math.cos(ca) * rimWR * 0.95
+    var topY = rimY + Math.sin(ca) * rimHR * 0.5
+    var botX = rimX + swish * 0.15 + Math.cos(ca + swish * 0.02) * netBotW * 0.8
+    var botY = netBotY + swish * 0.2
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.5 + 0.08 * Math.sin(ca)) + ')'
+    ctx.lineWidth = this._s(1.0)
+    ctx.beginPath()
+    ctx.moveTo(topX, topY)
+    var cpX = (topX + botX) / 2 + swish * (ci % 3 === 0 ? 0.5 : ci % 3 === 1 ? -0.4 : 0.05)
+    var cpY = (topY + botY) / 2 - this._s(2) - Math.abs(swish) * 0.2
+    ctx.quadraticCurveTo(cpX, cpY, botX, botY)
+    ctx.stroke()
+  }
+}
+
+GameEngine.prototype._drawReferee = function(ctx) {
+  var rx = this._s(500), rr = this._s(22)
+  var floorY = this._s(FLOOR_Y)
+  var ry = floorY // feet on floor
+  var bob = Math.sin(Date.now() * 0.003) * this._s(1.5)
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.15)'
+  ctx.beginPath(); ctx.ellipse(rx, floorY, rr * 0.5, rr * 0.1, 0, 0, Math.PI * 2); ctx.fill()
+
+  // Legs (black pants)
+  ctx.fillStyle = '#222'
+  ctx.fillRect(rx - rr * 0.4, ry - rr * 1.8, rr * 0.28, rr * 1.8)
+  ctx.fillRect(rx + rr * 0.12, ry - rr * 1.8, rr * 0.28, rr * 1.8)
+
+  // Shoes
+  ctx.fillStyle = '#111'
+  ctx.beginPath(); ctx.ellipse(rx - rr * 0.26, ry - rr * 0.02, rr * 0.28, rr * 0.08, 0, 0, Math.PI * 2); ctx.fill()
+  ctx.beginPath(); ctx.ellipse(rx + rr * 0.26, ry - rr * 0.02, rr * 0.28, rr * 0.08, 0, 0, Math.PI * 2); ctx.fill()
+
+  // Body (striped shirt)
+  ctx.fillStyle = '#ddd'
+  ctx.fillRect(rx - rr * 0.6, ry - rr * 3.8 + bob, rr * 1.2, rr * 2.2)
+  // Black stripes
+  ctx.fillStyle = '#111'
+  ctx.fillRect(rx - rr * 0.6, ry - rr * 3.8 + bob, rr * 1.2, rr * 0.45)
+  ctx.fillRect(rx - rr * 0.6, ry - rr * 2.7 + bob, rr * 1.2, rr * 0.45)
+
+  // Left arm (down)
+  ctx.strokeStyle = '#d4a574'; ctx.lineWidth = this._s(2.8)
+  ctx.beginPath(); ctx.moveTo(rx - rr * 0.5, ry - rr * 3.2 + bob); ctx.lineTo(rx - rr * 1.0, ry - rr * 2.2 + bob); ctx.stroke()
+
+  // Right arm (raised, tossing ball)
+  ctx.beginPath(); ctx.moveTo(rx + rr * 0.5, ry - rr * 3.4 + bob); ctx.lineTo(rx + rr * 0.6, ry - rr * 5.0 + bob); ctx.stroke()
+
+  // Ball in hand (during countdown and raise phases)
+  if (this._jumpBallPhase === 'countdown' || this._jumpBallPhase === 'raise') {
+    ctx.fillStyle = '#ff8c00'
+    ctx.beginPath(); ctx.arc(rx + rr * 0.6, ry - rr * 5.2 + bob, rr * 0.4, 0, Math.PI * 2); ctx.fill()
+    ctx.strokeStyle = '#884400'; ctx.lineWidth = 0.8
+    ctx.beginPath(); ctx.arc(rx + rr * 0.6, ry - rr * 5.2 + bob, rr * 0.4, 0, Math.PI * 2); ctx.stroke()
+  }
+
+  // Head
+  ctx.fillStyle = '#d4a574'
+  ctx.beginPath(); ctx.arc(rx, ry - rr * 4.4 + bob, rr * 0.8, 0, Math.PI * 2); ctx.fill()
+  ctx.strokeStyle = '#b8936e'; ctx.lineWidth = this._s(1)
+  ctx.beginPath(); ctx.arc(rx, ry - rr * 4.4 + bob, rr * 0.8, 0, Math.PI * 2); ctx.stroke()
+
+  // Hair
+  ctx.fillStyle = '#333'
+  ctx.beginPath(); ctx.arc(rx, ry - rr * 4.35 + bob, rr * 0.82, Math.PI, 0); ctx.fill()
+
+  // Whistle
+  ctx.fillStyle = '#ccc'
+  ctx.beginPath(); ctx.arc(rx, ry - rr * 3.9 + bob, rr * 0.15, 0, Math.PI * 2); ctx.fill()
+
+  // Label
+  ctx.fillStyle = '#ffd700'
+  ctx.font = 'bold ' + Math.floor(rr * 0.6) + 'px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText('REFEREE', rx, ry + rr * 0.5)
+}
+
+GameEngine.prototype._drawBallShadow = function(ctx) {
+  if (!this.ballInAir) return
+  var bx = this.ball.x, by = this.ball.y
+  var floorY = this._s(FLOOR_Y)
+  var alpha = 0.1 + (by / this._s(COURT_H)) * 0.2
+  var shadowScale = 0.5 + (by / this._s(COURT_H)) * 0.3
+  ctx.fillStyle = 'rgba(0,0,0,' + alpha + ')'
+  ctx.beginPath()
+  ctx.ellipse(bx, floorY, this.ball.r * shadowScale, this.ball.r * 0.2, 0, 0, Math.PI * 2)
+  ctx.fill()
+}
+
+GameEngine.prototype._drawPlayers = function(ctx) {
+  var o = this.getOffPlayer(), d = this.getDefPlayer()
+  var offVis = this.poss === 0 ? this._p1Vis : this._p2Vis
+  var defVis = this.poss === 0 ? this._p2Vis : this._p1Vis
+  var offColor = o ? o.teamColor || '#1a6dd4' : '#1a6dd4'
+  var defColor = d ? d.teamColor || '#e03030' : '#e03030'
+
+  // Defender first (behind)
+  var defPose = this.blockAnim > 0 ? 'block' : 'defense'
+  this._drawPlayer(ctx, this.def, d, defColor, '守', defPose, defVis)
+
+  // Offense
+  var offPose = 'idle'
+  if (this._jumpType === 'dunk' && (this.shooting || this.shotReleased)) offPose = 'dunk'
+  else if (this.shooting || (this.shotReleased && this.shotResult)) offPose = 'shoot'
+  else if (this.driveAnim > 0) offPose = 'drive'
+  else if (this.ball.has && !this.ballInAir) offPose = 'dribble'
+  this._drawPlayer(ctx, this.off, o, offColor, '攻', offPose, offVis)
+
+  // Block jump effect
+  if (this.blockAnim > 0) {
+    var bp = this.blockAnim / 500
+    ctx.strokeStyle = 'rgba(255,200,0,' + (0.5 * (1 - bp)) + ')'
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.arc(this.def.x, this.def.y - this.def.r - bp * this._s(60), this._s(18) * (1 + bp), 0, Math.PI * 2)
+    ctx.stroke()
+  }
+
+  // Drive trail
+  if (this.driveAnim > 0) {
+    ctx.fillStyle = 'rgba(0,136,255,0.12)'
+    for (var ti = 0; ti < 4; ti++) {
+      ctx.beginPath()
+      ctx.arc(this.off.x + this.off.r - ti * this._s(12), this.off.y, this._s(18) * (1 - ti * 0.2), 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+}
+
+GameEngine.prototype._drawPlayer = function(ctx, p, data, color, label, pose, vis) {
+  if (!data) return
+  var cx = p.x, cy = p.y, r = p.r
+  if (!vis) vis = { size: 1, build: 1, skin: 3, hair: 2, acc: 0 }
+
+  // ---- Jump (dynamic from engine state machine) ----
+  var jumpY = 0
+  if (pose === 'block' && this._jumpType === 'block') jumpY = this._s(this._jumpY)
+  else if (pose === 'shoot' && this._jumpType === 'shoot') jumpY = this._s(this._jumpY)
+  else if (pose === 'dunk' && this._jumpType === 'dunk') jumpY = this._s(this._jumpY)
+  else if (pose === 'shoot' && this._jumpType === 'layup') jumpY = this._s(this._jumpY)
+
+  // ---- Lean (dribble = forward, fadeaway = backward) ----
+  var leanX = 0
+  if (pose === 'dribble') leanX = r * 0.15
+  if (pose === 'shoot' && this._fadeaway) leanX = -r * 0.55
+
+  // ---- Skin tones ----
+  var skins = [
+    { b: '#f5d5b8', d: '#d4a87c', l: '#fdf0e5' },
+    { b: '#f0c8a0', d: '#c8946a', l: '#fae8d5' },
+    { b: '#e8b88a', d: '#c08060', l: '#f5dcc8' },
+    { b: '#d4a574', d: '#a87050', l: '#e8c8a8' },
+    { b: '#c08a5a', d: '#8a5535', l: '#d8b898' },
+    { b: '#a06840', d: '#704020', l: '#c89870' },
+    { b: '#7a4a28', d: '#4a2810', l: '#a87050' },
+  ]
+  var sk = skins[vis.skin % 7]
+  var st = sk.b; var sd = sk.d; var sl = sk.l
+
+  // ---- Build ----
+  var bf = 0.88 + vis.build * 0.24
+
+  // ---- Body layout ----
+  var floorY = this._s(FLOOR_Y)
+  // Dribble bob: subtle vertical bounce when dribbling
+  var dribbleBob = (pose === 'dribble') ? Math.abs(Math.sin(this._dribblePhase * 1.6)) * r * 0.04 : 0
+  var footY = floorY + jumpY - dribbleBob
+  var ankleY = footY - r * 0.08
+  var kneeY = ankleY - r * 0.62
+  var hipY = kneeY - r * 0.62
+  var waistY = hipY + r * 0.06
+  var bellyY = hipY - r * 0.25
+  var armpitY = hipY - r * 0.82
+  var shoulderY = hipY - r * 1.08
+  var neckTopY = shoulderY - r * 0.18
+  var headCY = neckTopY - r * 0.38
+  var headR = r * 0.4
+  var blw = Math.max(0.6, r * 0.03)
+
+  // ---- Shadow ----
+  var shS = 1 - Math.abs(jumpY) / (r * 4 + 1)
+  if (shS < 0.15) shS = 0.15
+  ctx.fillStyle = 'rgba(0,0,0,' + (0.25 * shS) + ')'
+  ctx.beginPath()
+  ctx.ellipse(cx, floorY, r * 0.6 * shS * bf, r * 0.08 * shS, 0, 0, Math.PI * 2)
+  ctx.fill()
+
+  // ---- Leg positions ----
+  var lHX, lKX, lAX, rHX, rKX, rAX, lKneeY = kneeY, rKneeY = kneeY
+  if (pose === 'defense') {
+    // Defense stance with subtle shuffle animation
+    var defMoving = Math.abs(this.defInput.mx) > 0.05 || Math.abs(this.defInput.my) > 0.05
+    var defT = defMoving ? Math.sin(this._runPhase * 1.5) * r * 0.08 : 0
+    lHX = cx - r * 0.2 * bf; lKX = cx - r * 0.32 * bf + defT; lAX = cx - r * 0.5 * bf + defT * 1.2
+    rHX = cx + r * 0.2 * bf; rKX = cx + r * 0.32 * bf - defT; rAX = cx + r * 0.5 * bf - defT * 1.2
+    lKneeY = kneeY - Math.abs(defT) * 0.5; rKneeY = kneeY - Math.abs(defT) * 0.5
+  } else if (pose === 'drive') {
+    lHX = cx - r * 0.18 * bf; lKX = cx - r * 0.12 * bf; lAX = cx - r * 0.25 * bf
+    rHX = cx + r * 0.22 * bf; rKX = cx + r * 0.32 * bf; rAX = cx + r * 0.5 * bf
+  } else {
+    // Running animation: legs swing forward/back + slightly lift
+    var isMoving = pose === 'dribble' && (Math.abs(this.offInput.mx) > 0.05 || Math.abs(this.offInput.my) > 0.05)
+    var runT = isMoving ? Math.sin(this._runPhase) : 0
+    var stride = isMoving ? r * 0.2 : 0
+    var lift = isMoving ? r * 0.08 : 0
+    lHX = cx - r * 0.16 * bf
+    lKX = cx - r * 0.18 * bf + runT * stride
+    lAX = cx - r * 0.25 * bf + runT * stride * 1.5
+    lKneeY = kneeY - Math.abs(runT) * lift
+    rHX = cx + r * 0.16 * bf
+    rKX = cx + r * 0.18 * bf - runT * stride
+    rAX = cx + r * 0.25 * bf - runT * stride * 1.5
+    rKneeY = kneeY - Math.abs(runT) * lift
+  }
+
+  var lKY = lKneeY, rKY = rKneeY
+
+  var legW = r * 0.17 * bf
+
+  // ---- Draw LEFT LEG (behind) ----
+  // Upper leg
+  ctx.fillStyle = st
+  ctx.beginPath(); ctx.moveTo(lHX - legW * 0.7, hipY); ctx.lineTo(lKX - legW * 0.6, lKY); ctx.lineTo(lKX + legW * 0.6, lKY); ctx.lineTo(lHX + legW * 0.7, hipY); ctx.closePath(); ctx.fill()
+  ctx.strokeStyle = sd; ctx.lineWidth = blw; ctx.stroke()
+  // Lower leg
+  ctx.fillStyle = st
+  ctx.beginPath(); ctx.moveTo(lKX - legW * 0.6, lKY); ctx.lineTo(lAX - legW * 0.5, ankleY); ctx.lineTo(lAX + legW * 0.5, ankleY); ctx.lineTo(lKX + legW * 0.6, lKY); ctx.closePath(); ctx.fill()
+  ctx.strokeStyle = sd; ctx.lineWidth = blw; ctx.stroke()
+  // Shoe
+  ctx.fillStyle = '#1a1a1a'
+  ctx.beginPath(); ctx.ellipse(lAX, ankleY + r * 0.06, r * 0.22, r * 0.09, 0, 0, Math.PI * 2); ctx.fill()
+  ctx.fillStyle = '#333'
+  ctx.beginPath(); ctx.ellipse(lAX, ankleY + r * 0.1, r * 0.16, r * 0.05, 0, Math.PI, 0); ctx.fill()
+  // Sock
+  ctx.fillStyle = '#fff'
+  ctx.fillRect(lAX - legW * 0.65, ankleY - r * 0.14, legW * 1.3, r * 0.16)
+
+  // ---- DRAW SHORTS ----
+  var sTop = hipY - r * 0.06
+  var sBot = hipY + r * 0.32
+  var sFlare = r * 0.08 * bf
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.moveTo(cx - r * 0.42 * bf, sTop); ctx.lineTo(cx - r * 0.5 * bf - sFlare, sBot); ctx.lineTo(cx + r * 0.5 * bf + sFlare, sBot); ctx.lineTo(cx + r * 0.42 * bf, sTop)
+  ctx.closePath(); ctx.fill()
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = blw; ctx.stroke()
+  // Waistband
+  ctx.fillStyle = 'rgba(255,255,255,0.15)'
+  ctx.fillRect(cx - r * 0.43 * bf, sTop - r * 0.03, r * 0.86 * bf, r * 0.06)
+
+  // ---- Draw RIGHT LEG (front) ----
+  // Upper leg
+  ctx.fillStyle = st
+  ctx.beginPath(); ctx.moveTo(rHX - legW * 0.7, hipY); ctx.lineTo(rKX - legW * 0.6, rKY); ctx.lineTo(rKX + legW * 0.6, rKY); ctx.lineTo(rHX + legW * 0.7, hipY); ctx.closePath(); ctx.fill()
+  ctx.strokeStyle = sd; ctx.lineWidth = blw; ctx.stroke()
+  // Lower leg
+  ctx.fillStyle = st
+  ctx.beginPath(); ctx.moveTo(rKX - legW * 0.6, rKY); ctx.lineTo(rAX - legW * 0.5, ankleY); ctx.lineTo(rAX + legW * 0.5, ankleY); ctx.lineTo(rKX + legW * 0.6, rKY); ctx.closePath(); ctx.fill()
+  ctx.strokeStyle = sd; ctx.lineWidth = blw; ctx.stroke()
+  // Shoe
+  ctx.fillStyle = '#1a1a1a'
+  ctx.beginPath(); ctx.ellipse(rAX, ankleY + r * 0.06, r * 0.22, r * 0.09, 0, 0, Math.PI * 2); ctx.fill()
+  ctx.fillStyle = '#333'
+  ctx.beginPath(); ctx.ellipse(rAX, ankleY + r * 0.1, r * 0.16, r * 0.05, 0, Math.PI, 0); ctx.fill()
+  // Sock
+  ctx.fillStyle = '#fff'
+  ctx.fillRect(rAX - legW * 0.65, ankleY - r * 0.14, legW * 1.3, r * 0.16)
+
+  // ---- UPPER BODY (lean applied) ----
+  ctx.save()
+  ctx.translate(leanX, 0)
+
+  // ---- JERSEY ----
+  var jBot = hipY + r * 0.02
+  var jTop = shoulderY - r * 0.02
+  var jMid = (jTop + jBot) / 2
+  var jW = r * 0.46 * bf
+
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.moveTo(cx - r * 0.22 * bf, jTop)
+  ctx.lineTo(cx - jW, armpitY); ctx.lineTo(cx - r * 0.42 * bf, waistY); ctx.lineTo(cx - r * 0.38 * bf, jBot)
+  ctx.lineTo(cx + r * 0.38 * bf, jBot)
+  ctx.lineTo(cx + r * 0.42 * bf, waistY); ctx.lineTo(cx + jW, armpitY); ctx.lineTo(cx + r * 0.22 * bf, jTop)
+  ctx.closePath(); ctx.fill()
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = blw; ctx.stroke()
+
+  // V-neck
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'
+  ctx.beginPath()
+  ctx.moveTo(cx - r * 0.22 * bf, jTop); ctx.lineTo(cx, jTop + r * 0.15); ctx.lineTo(cx + r * 0.22 * bf, jTop)
+  ctx.lineTo(cx + r * 0.28 * bf, jTop + r * 0.01); ctx.lineTo(cx, jTop + r * 0.22); ctx.lineTo(cx - r * 0.28 * bf, jTop + r * 0.01)
+  ctx.closePath(); ctx.fill()
+
+  // Side stripe
+  ctx.fillStyle = 'rgba(255,255,255,0.06)'
+  ctx.fillRect(cx - r * 0.35 * bf, jTop + r * 0.2, r * 0.06, jBot - jTop - r * 0.35)
+  ctx.fillRect(cx + r * 0.29 * bf, jTop + r * 0.2, r * 0.06, jBot - jTop - r * 0.35)
+
+  // ---- NUMBER ----
+  ctx.fillStyle = '#fff'
+  ctx.font = 'bold ' + Math.floor(r * 0.58) + 'px sans-serif'
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+  ctx.fillText(data.num || '?', cx, (jTop + bellyY) / 2)
+
+  // ---- ARMS ----
+  var armW = r * 0.15 * bf
+  var lEX, lEY, lHndX, lHndY, rEX, rEY, rHndX, rHndY
+
+  if (pose === 'dunk') {
+    // Dunk: one arm fully extended straight up holding ball above head
+    rEX = cx + r * 0.05; rEY = shoulderY - r * 1.6; rHndX = cx - r * 0.05; rHndY = shoulderY - r * 2.9
+    lEX = cx - r * 0.25; lEY = shoulderY - r * 0.5; lHndX = cx - r * 0.5; lHndY = shoulderY - r * 0.8
+  } else if (pose === 'shoot') {
+    // Shooting arm raised high overhead, guide hand at ball side
+    rEX = cx + r * 0.15; rEY = shoulderY - r * 1.0; rHndX = cx + r * 0.1; rHndY = shoulderY - r * 2.1
+    lEX = cx - r * 0.22; lEY = shoulderY - r * 0.8; lHndX = cx - r * 0.12; lHndY = shoulderY - r * 1.95
+  } else if (pose === 'block') {
+    // Both arms fully extended straight up
+    rEX = cx + r * 0.08; rEY = shoulderY - r * 1.2; rHndX = cx + r * 0.02; rHndY = shoulderY - r * 2.4
+    lEX = cx - r * 0.08; lEY = shoulderY - r * 1.2; lHndX = cx - r * 0.02; lHndY = shoulderY - r * 2.4
+  } else if (pose === 'dribble') {
+    rEX = cx + r * 0.25; rEY = shoulderY + r * 0.15; rHndX = cx + r * 0.3; rHndY = shoulderY + r * 0.65
+    lEX = cx - r * 0.28; lEY = shoulderY - r * 0.15; lHndX = cx - r * 0.45; lHndY = shoulderY + r * 0.05
+  } else if (pose === 'drive') {
+    rEX = cx + r * 0.3; rEY = shoulderY - r * 0.08; rHndX = cx + r * 0.6; rHndY = shoulderY - r * 0.35
+    lEX = cx - r * 0.3; lEY = shoulderY + r * 0.15; lHndX = cx - r * 0.5; lHndY = shoulderY + r * 0.4
+  } else if (pose === 'defense') {
+    rEX = cx + r * 0.35; rEY = shoulderY + r * 0.02; rHndX = cx + r * 0.85; rHndY = shoulderY - r * 0.18
+    lEX = cx - r * 0.35; lEY = shoulderY + r * 0.02; lHndX = cx - r * 0.85; lHndY = shoulderY - r * 0.18
+  } else {
+    rEX = cx + r * 0.25; rEY = shoulderY + r * 0.1; rHndX = cx + r * 0.42; rHndY = shoulderY + r * 0.4
+    lEX = cx - r * 0.25; lEY = shoulderY + r * 0.1; lHndX = cx - r * 0.42; lHndY = shoulderY + r * 0.4
+  }
+
+  // Function to draw a single arm
+  var drawArm = function(ex, ey, hx, hy, side) {
+    var shX = cx + side * r * 0.2 * bf
+    ctx.fillStyle = st
+    ctx.beginPath()
+    ctx.moveTo(shX, shoulderY - armW * 0.4); ctx.lineTo(ex - armW * 0.5, ey); ctx.lineTo(ex + armW * 0.5, ey); ctx.lineTo(shX, shoulderY + armW * 0.4)
+    ctx.closePath(); ctx.fill()
+    ctx.strokeStyle = sd; ctx.lineWidth = blw; ctx.stroke()
+    ctx.fillStyle = st
+    ctx.beginPath()
+    ctx.moveTo(ex - armW * 0.45, ey); ctx.lineTo(hx - armW * 0.4, hy); ctx.lineTo(hx + armW * 0.4, hy); ctx.lineTo(ex + armW * 0.45, ey)
+    ctx.closePath(); ctx.fill()
+    ctx.strokeStyle = sd; ctx.lineWidth = blw; ctx.stroke()
+    ctx.fillStyle = st
+    ctx.beginPath(); ctx.arc(hx, hy, r * 0.1, 0, Math.PI * 2); ctx.fill()
+    ctx.strokeStyle = sd; ctx.lineWidth = blw; ctx.stroke()
+  }
+
+  drawArm(lEX, lEY, lHndX, lHndY, -1)
+  drawArm(rEX, rEY, rHndX, rHndY, 1)
+
+  // ---- NECK ----
+  ctx.fillStyle = st
+  ctx.fillRect(cx - r * 0.11 * bf, neckTopY, r * 0.22 * bf, shoulderY - neckTopY + r * 0.02)
+
+  // ---- HEAD ----
+  var headGrad = ctx.createRadialGradient(cx, headCY - headR * 0.1, headR * 0.3, cx, headCY, headR)
+  headGrad.addColorStop(0, sl); headGrad.addColorStop(0.7, st); headGrad.addColorStop(1, sd)
+  ctx.fillStyle = headGrad
+  ctx.beginPath(); ctx.arc(cx, headCY, headR, 0, Math.PI * 2); ctx.fill()
+  ctx.strokeStyle = sd; ctx.lineWidth = blw; ctx.stroke()
+
+  // ---- HAIR (3 styles) ----
+  var hairColor = vis.skin >= 5 ? '#0a0a0a' : '#1a1a1a'
+  ctx.fillStyle = hairColor
+  if (vis.hair === 0 || vis.hair === 3) {
+    // Short
+    ctx.beginPath(); ctx.arc(cx, headCY - headR * 0.08, headR * 1.02, Math.PI, 0); ctx.fill()
+  } else if (vis.hair === 1 || vis.hair === 4) {
+    // Flat top
+    ctx.fillRect(cx - headR * 1.02, headCY - headR * 1.02, headR * 2.04, headR * 0.55)
+    ctx.beginPath(); ctx.arc(cx, headCY - headR * 0.05, headR * 1.02, Math.PI, 0); ctx.fill()
+  } else {
+    // Curly
+    ctx.beginPath()
+    ctx.arc(cx, headCY - headR * 0.05, headR * 1.12, Math.PI, 0)
+    ctx.lineTo(cx + headR * 1.12, headCY - headR * 0.05)
+    ctx.arc(cx, headCY - headR * 0.05, headR * 1.12, 0, Math.PI)
+    ctx.closePath(); ctx.fill()
+  }
+
+  // ---- Face ----
+  // Eyebrows
+  ctx.strokeStyle = hairColor; ctx.lineWidth = Math.max(0.8, r * 0.06); ctx.lineCap = 'round'
+  ctx.beginPath(); ctx.moveTo(cx - headR * 0.45, headCY - headR * 0.3); ctx.lineTo(cx - headR * 0.08, headCY - headR * 0.22); ctx.stroke()
+  ctx.beginPath(); ctx.moveTo(cx + headR * 0.45, headCY - headR * 0.3); ctx.lineTo(cx + headR * 0.08, headCY - headR * 0.22); ctx.stroke()
+
+  // Eyes
+  var eyeSY = headCY - headR * 0.05
+  ctx.fillStyle = '#fff'
+  ctx.beginPath(); ctx.ellipse(cx - headR * 0.27, eyeSY, headR * 0.18, headR * 0.14, 0, 0, Math.PI * 2); ctx.fill()
+  ctx.beginPath(); ctx.ellipse(cx + headR * 0.27, eyeSY, headR * 0.18, headR * 0.14, 0, 0, Math.PI * 2); ctx.fill()
+  ctx.fillStyle = '#111'
+  ctx.beginPath(); ctx.arc(cx - headR * 0.25, eyeSY, headR * 0.09, 0, Math.PI * 2); ctx.fill()
+  ctx.beginPath(); ctx.arc(cx + headR * 0.29, eyeSY, headR * 0.09, 0, Math.PI * 2); ctx.fill()
+  ctx.fillStyle = '#fff'
+  ctx.beginPath(); ctx.arc(cx - headR * 0.27, eyeSY - headR * 0.04, headR * 0.035, 0, Math.PI * 2); ctx.fill()
+  ctx.beginPath(); ctx.arc(cx + headR * 0.27, eyeSY - headR * 0.04, headR * 0.035, 0, Math.PI * 2); ctx.fill()
+
+  // Nose
+  ctx.strokeStyle = sd; ctx.lineWidth = blw + 0.2
+  ctx.beginPath(); ctx.moveTo(cx, headCY - headR * 0.1); ctx.lineTo(cx, headCY + headR * 0.15); ctx.stroke()
+  ctx.beginPath(); ctx.arc(cx - headR * 0.06, headCY + headR * 0.15, headR * 0.07, 0.1, Math.PI - 0.1); ctx.stroke()
+
+  // Mouth
+  ctx.strokeStyle = '#b87060'; ctx.lineWidth = Math.max(0.5, r * 0.03)
+  ctx.beginPath(); ctx.arc(cx, headCY + headR * 0.28, headR * 0.16, 0.15, Math.PI - 0.15); ctx.stroke()
+
+  // ---- HEADBAND ----
+  if (data.num && data.num >= 10) {
+    var hbTop = headCY - headR * 0.85
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(cx - headR * 0.95, hbTop, headR * 1.9, headR * 0.12)
+    ctx.beginPath()
+    ctx.moveTo(cx + headR * 0.85, hbTop + headR * 0.02); ctx.lineTo(cx + headR * 1.05, hbTop - headR * 0.1); ctx.lineTo(cx + headR * 0.88, hbTop + headR * 0.08)
+    ctx.closePath(); ctx.fill()
+  }
+
+  // ---- NAME ----
+  ctx.fillStyle = 'rgba(255,255,255,0.7)'
+  ctx.font = 'bold ' + Math.floor(r * 0.3) + 'px sans-serif'
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top'
+  ctx.fillText(data.name || '', cx, footY + this._s(3))
+
+  // ---- POSSESSION INDICATOR ----
+  if (this.ball.has) {
+    var indY = headCY - headR - this._s(12)
+    var indW = r * 0.55; var indH = r * 0.24
+    var indColor = label === '攻' ? '#ffaa00' : '#ff5555'
+    ctx.fillStyle = indColor
+    ctx.beginPath()
+    this._roundRect(ctx, cx - indW / 2, indY, indW, indH, r * 0.12)
+    ctx.fill()
+    ctx.fillStyle = '#fff'
+    ctx.font = 'bold ' + Math.floor(r * 0.26) + 'px sans-serif'
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    ctx.fillText(label === '攻' ? '进攻' : '防守', cx, indY + indH / 2)
+  }
+
+  ctx.restore()
+}
+
+GameEngine.prototype._rgba = function(hex, alpha) {
+  var r, g, b
+  if (hex[0] === '#') {
+    r = parseInt(hex.substr(1, 2), 16)
+    g = parseInt(hex.substr(3, 2), 16)
+    b = parseInt(hex.substr(5, 2), 16)
+  } else { return hex }
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')'
+}
+
+GameEngine.prototype._darken = function(hex, amount) {
+  var r, g, b
+  if (hex[0] === '#') {
+    r = parseInt(hex.substr(1, 2), 16)
+    g = parseInt(hex.substr(3, 2), 16)
+    b = parseInt(hex.substr(5, 2), 16)
+  } else { return hex }
+  r = Math.floor(r * (1 - amount))
+  g = Math.floor(g * (1 - amount))
+  b = Math.floor(b * (1 - amount))
+  return 'rgb(' + r + ',' + g + ',' + b + ')'
+}
+
+GameEngine.prototype._lighten = function(hex, amount) {
+  var r, g, b
+  if (hex[0] === '#') {
+    r = parseInt(hex.substr(1, 2), 16)
+    g = parseInt(hex.substr(3, 2), 16)
+    b = parseInt(hex.substr(5, 2), 16)
+  } else { return hex }
+  r = Math.min(255, Math.floor(r + (255 - r) * amount))
+  g = Math.min(255, Math.floor(g + (255 - g) * amount))
+  b = Math.min(255, Math.floor(b + (255 - b) * amount))
+  return 'rgb(' + r + ',' + g + ',' + b + ')'
+}
+
+GameEngine.prototype._roundRect = function(ctx, x, y, w, h, r) {
+  ctx.moveTo(x + r, y)
+  ctx.lineTo(x + w - r, y)
+  ctx.arcTo(x + w, y, x + w, y + r, r)
+  ctx.lineTo(x + w, y + h - r)
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r)
+  ctx.lineTo(x + r, y + h)
+  ctx.arcTo(x + r, y + h, x, y + h - r, r)
+  ctx.lineTo(x, y + r)
+  ctx.arcTo(x, y, x + r, y, r)
+  ctx.closePath()
+}
+
+GameEngine.prototype._drawBall = function(ctx) {
+  var bx = this.ball.x, by = this.ball.y, br = this.ball.r
+
+  // Loose ball glow
+  if (this.ballLoose) {
+    var pulse = 0.5 + 0.5 * Math.sin(Date.now() / 250)
+    ctx.strokeStyle = 'rgba(0,255,136,' + (0.3 + pulse * 0.4) + ')'
+    ctx.lineWidth = 3 + pulse * 2
+    ctx.beginPath()
+    ctx.arc(bx, by, br + this._s(8) + pulse * this._s(4), 0, Math.PI * 2)
+    ctx.stroke()
+  }
+
+  // Trail
+  if (this.ballInAir) {
+    for (var i = 0; i < this._trail.length; i++) {
+      var t = this._trail[i]
+      var alpha = t.life / 300 * 0.25
+      if (alpha > 0) {
+        ctx.fillStyle = 'rgba(255,140,0,' + alpha + ')'
+        ctx.beginPath(); ctx.arc(t.x, t.y, br * 0.5, 0, Math.PI * 2); ctx.fill()
+      }
+    }
+  }
+
+  // Ball shadow on floor
+  if (this.ballInAir) {
+    var shAlpha = 0.08 + (by / this._s(COURT_H)) * 0.1
+    ctx.fillStyle = 'rgba(0,0,0,' + shAlpha + ')'
+    ctx.beginPath()
+    ctx.ellipse(bx, this._s(FLOOR_Y - 2), br * 0.7, br * 0.25, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  // Ball body with orange gradient
+  var grad = ctx.createRadialGradient(bx - br * 0.3, by - br * 0.35, br * 0.1, bx, by, br)
+  grad.addColorStop(0, '#ffbb44')
+  grad.addColorStop(0.6, '#ee8811')
+  grad.addColorStop(1, '#bb5500')
+  ctx.fillStyle = grad
+  ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill()
+  ctx.strokeStyle = '#884400'; ctx.lineWidth = 1.2; ctx.stroke()
+
+  // Ball seams (rotating)
+  ctx.save()
+  ctx.translate(bx, by)
+  ctx.rotate(this.ball.rot || 0)
+  ctx.strokeStyle = '#2a1a08'; ctx.lineWidth = 0.9
+  // Horizontal seam
+  ctx.beginPath(); ctx.moveTo(-br * 0.95, 0); ctx.lineTo(br * 0.95, 0); ctx.stroke()
+  // Vertical seam
+  ctx.beginPath(); ctx.moveTo(0, -br * 0.95); ctx.lineTo(0, br * 0.95); ctx.stroke()
+  // Curved seams
+  ctx.beginPath(); ctx.arc(0, 0, br * 0.55, -0.6, 0.6); ctx.stroke()
+  ctx.beginPath(); ctx.arc(0, 0, br * 0.55, Math.PI - 0.6, Math.PI + 0.6); ctx.stroke()
+  ctx.restore()
+
+  // Ball highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.15)'
+  ctx.beginPath()
+  ctx.arc(bx - br * 0.3, by - br * 0.3, br * 0.25, 0, Math.PI * 2)
+  ctx.fill()
+}
+
+GameEngine.prototype._drawParticles = function(ctx) {
+  for (var i = 0; i < this._particles.length; i++) {
+    var pt = this._particles[i]
+    var alpha = pt.life / 700
+    if (alpha > 0) {
+      ctx.fillStyle = pt.color; ctx.globalAlpha = alpha
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2); ctx.fill()
+    }
+  }
+  ctx.globalAlpha = 1
+}
+
+GameEngine.prototype._drawScorePopups = function(ctx) {
+  for (var i = 0; i < this._scorePopups.length; i++) {
+    var p = this._scorePopups[i]
+    var alpha = Math.min(1, p.life / 600)
+    var scale = 1 + (1 - p.life / p.maxLife) * 0.5
+    ctx.save()
+    ctx.globalAlpha = alpha
+    ctx.translate(p.x, p.y)
+    ctx.scale(scale, scale)
+    ctx.font = 'bold ' + this._s(22) + 'px sans-serif'
+    ctx.fillStyle = '#ffd700'
+    ctx.textAlign = 'center'
+    ctx.fillText(p.text, 0, 0)
+    ctx.restore()
+  }
+}
+
+GameEngine.prototype._drawUI = function(ctx) {
+  var w = this.w, h = this.h, s = this.s
+  var p1 = this.p1, p2 = this.p2
+
+  // === Scoreboard bar ===
+  var barH = this._s(36), barY = this._s(2)
+  ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, barY, w, barH)
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(0, barY + barH - 1, w, 1)
+
+  // Team colors
+  var c1 = p1 ? (p1.teamColor || '#1a6dd4') : '#1a6dd4'
+  var c2 = p2 ? (p2.teamColor || '#e03030') : '#e03030'
+  ctx.fillStyle = c1; ctx.fillRect(this._s(4), barY + this._s(3), this._s(3), barH - this._s(6))
+  ctx.fillStyle = c2; ctx.fillRect(w - this._s(7), barY + this._s(3), this._s(3), barH - this._s(6))
+
+  // Player names
+  ctx.fillStyle = '#fff'; ctx.font = 'bold ' + Math.floor(this._s(11)) + 'px sans-serif'; ctx.textBaseline = 'middle'
+  ctx.textAlign = 'left'; ctx.fillText((p1 ? p1.name : 'P1'), this._s(12), barY + barH / 2)
+  ctx.textAlign = 'right'; ctx.fillText((p2 ? p2.name : 'P2'), w - this._s(12), barY + barH / 2)
+
+  // Score
+  ctx.fillStyle = '#fff'; ctx.font = 'bold ' + Math.floor(this._s(16)) + 'px sans-serif'
+  ctx.textAlign = 'center'
+  var scText = this.score[0] + ' - ' + this.score[1]
+  // Highlight if game point
+  if (this.score[0] >= 10 || this.score[1] >= 10) ctx.fillStyle = '#ffd700'
+  ctx.fillText(scText, w / 2, barY + barH / 2)
+
+  // Shot clock & game time
+  var clockX = w / 2 + this._s(40), clockY = barY + barH / 2
+  var sc = Math.max(0, Math.ceil(24 - this.shotClockTimer / 1000))
+  ctx.fillStyle = sc <= 5 ? '#ff4444' : 'rgba(255,255,255,0.6)'
+  ctx.font = Math.floor(this._s(9)) + 'px sans-serif'
+  ctx.fillText(sc + 's', clockX, clockY)
+  var gm = Math.floor(Math.max(0, this.gameTimer / 1000) / 60)
+  var gs = Math.floor(Math.max(0, this.gameTimer / 1000) % 60)
+  ctx.fillText(gm + ':' + (gs < 10 ? '0' : '') + gs, w - this._s(50), clockY)
+
+  // Possession indicator
+  var px = this.poss === 0 ? this._s(12) : w - this._s(12)
+  ctx.fillStyle = '#ff8c00'; ctx.beginPath()
+  ctx.arc(px, barY + barH + this._s(8), this._s(4), 0, Math.PI * 2); ctx.fill()
+
+  // === Score popup ===
+  if (this.scoredAnim > 0 && this.shotResult) {
+    var a2 = Math.min(1, this.scoredAnim / 600)
+    var oy = (1200 - this.scoredAnim) / 1200 * this._s(60)
+    ctx.fillStyle = this.shotResult.made ? 'rgba(255,215,0,' + a2 + ')' : 'rgba(255,100,100,' + a2 + ')'
+    ctx.font = 'bold ' + Math.floor(this._s(28)) + 'px sans-serif'; ctx.textAlign = 'center'
+    ctx.fillText(this.shotResult.made ? '+' + this.shotResult.pts : 'MISS', w / 2, this._s(220) - oy)
+  }
+
+  // Shot timing label
+  if (this.shotReleased && this.shotResult) {
+    var tc = this.shotResult.timing === '完美' ? '#ffd700' : this.shotResult.timing === '不错' ? '#0f0' : '#fff'
+    ctx.fillStyle = tc; ctx.font = 'bold ' + Math.floor(this._s(13)) + 'px sans-serif'; ctx.textAlign = 'center'
+    ctx.fillText(this.shotResult.timing, w / 2, this._s(250))
+  }
+
+  // Message
+  if (this.msgTimer > 0) {
+    var ma = Math.min(1, this.msgTimer / 300)
+    ctx.fillStyle = 'rgba(255,255,255,' + ma + ')'
+    ctx.font = 'bold ' + Math.floor(this._s(16)) + 'px sans-serif'; ctx.textAlign = 'center'
+    ctx.fillText(this.msg, w / 2, this._s(320))
+  }
+
+  // Stamina bars (bottom corners)
+  var sbW = this._s(50), sbH = this._s(4), sbY = h - this._s(20)
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(this._s(8), sbY, sbW, sbH)
+  var sc2 = this.stamina / 100
+  ctx.fillStyle = sc2 > 0.5 ? '#0c6' : sc2 > 0.25 ? '#fa0' : '#f44'
+  ctx.fillRect(this._s(8), sbY, sbW * sc2, sbH)
+}
+
+
+
+// ============ WEB GAME CONTROLLER ============
+var canvas, ctx, engine, p1, p2, gameLoop, lastFrame;
+var gameState = {started:false, duration:120, scoringMode:'alternate'};
+
+function $(id){ return document.getElementById(id); }
+
+var meter = $('meter'), meterGreen = $('meterGreen'), meterFill = $('meterFill'), meterMark = $('meterMark');
+var msgBox = $('msg'), msgText = $('msgText');
+var joyBase = $('joyBase'), joyDot = $('joyDot'), joyArea = $('joyArea');
+var btnShoot = $('btnShoot'), btnRebound = $('btnRebound'), btnDrive = $('btnDrive'), btnSteal = $('btnSteal'), btnBlock = $('btnBlock');
+var setupOverlay = $('setupOverlay'), gameOverOverlay = $('gameOverOverlay');
+
+// ============ CANVAS ============
+function initCanvas() {
+  canvas = $('gc');
+  ctx = canvas.getContext('2d');
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+}
+
+function resizeCanvas() {
+  var w = window.innerWidth, h = window.innerHeight;
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+  if (engine) { engine.w = w; engine.h = h; engine.s = Math.min(w / COURT_W, h / COURT_H); }
+}
+
+// ============ SCREENS ============
+function showScreen(id) {
+  var els = document.querySelectorAll('.overlay');
+  for (var i = 0; i < els.length; i++) els[i].classList.add('hidden');
+  if (id) $(id).classList.remove('hidden');
+}
+
+// ============ PLAYER SELECTION ============
+var selP1 = null, selP2 = null, selTeam1 = 'liaoning', selTeam2 = 'guangdong';
+
+function getTeamPlayers(teamId) {
+  return getPlayersByTeam(teamId);
+}
+
+function buildTeamSelector(containerId, side) {
+  var teams = getTeams();
+  var html = '';
+  for (var i = 0; i < teams.length; i++) {
+    var t = teams[i];
+    html += '<div class="team-tab" data-team="' + t.id + '" style="border-left:3px solid ' + t.color + '">' + t.abbr + ' (' + t.count + ')</div>';
+  }
+  $(containerId).innerHTML = html;
+  // Click handlers
+  var tabs = $(containerId).querySelectorAll('.team-tab');
+  for (var j = 0; j < tabs.length; j++) {
+    tabs[j].addEventListener('click', function() {
+      var tid = this.getAttribute('data-team');
+      if (side === 'p1') { selTeam1 = tid; selP1 = null; }
+      else { selTeam2 = tid; selP2 = null; }
+      // Highlight
+      var all = this.parentElement.querySelectorAll('.team-tab');
+      for (var k = 0; k < all.length; k++) all[k].classList.remove('sel');
+      this.classList.add('sel');
+      buildPlayerGrid(side === 'p1' ? 'playerGrid' : 'playerGrid2', side);
+    });
+  }
+  // Select first by default
+  if (tabs.length > 0) tabs[side === 'p1' ? 0 : 1].classList.add('sel');
+}
+
+function buildPlayerGrid(containerId, side) {
+  var tid = side === 'p1' ? selTeam1 : selTeam2;
+  var players = getPlayersByTeam(tid);
+  var grid = $(containerId);
+  grid.innerHTML = '';
+  for (var i = 0; i < players.length; i++) {
+    (function(p) {
+      var card = document.createElement('div');
+      card.className = 'player-card';
+      card.innerHTML = '<span class="p-num" style="color:' + p.teamColor + '">' + p.num + '</span><span class="p-name">' + p.name + '</span><span class="p-pos">' + p.pos + '</span>';
+      card.addEventListener('click', function() {
+        if (side === 'p1') { selP1 = p; selectInGrid(this, 'playerGrid'); }
+        else { selP2 = p; selectInGrid(this, 'playerGrid2'); }
+      });
+      grid.appendChild(card);
+    })(players[i]);
+  }
+}
+
+function selectInGrid(el, gridId) {
+  var cards = $(gridId).querySelectorAll('.player-card');
+  for (var i = 0; i < cards.length; i++) cards[i].classList.remove('sel');
+  el.classList.add('sel');
+}
+
+// Build team selectors
+buildTeamSelector('teamTabs1', 'p1');
+buildTeamSelector('teamTabs2', 'p2');
+buildPlayerGrid('playerGrid', 'p1');
+buildPlayerGrid('playerGrid2', 'p2');
+selP1 = getPlayersByTeam('liaoning')[0];
+selP2 = getPlayersByTeam('guangdong')[0];
+setTimeout(function() {
+  var c1 = $('playerGrid').querySelectorAll('.player-card');
+  var c2 = $('playerGrid2').querySelectorAll('.player-card');
+  if (c1[0]) c1[0].classList.add('sel');
+  if (c2[0]) c2[0].classList.add('sel');
+}, 200);
+
+// ============ GAME MODE SELECTION ============
+gameState.gameMode = 'ai'; // ai | local | online
+$('modeAI').addEventListener('click', function() { gameState.gameMode = 'ai'; updateModeTabs(); });
+$('modeLocal').addEventListener('click', function() { gameState.gameMode = 'local'; updateModeTabs(); });
+$('modeOnline').addEventListener('click', function() { gameState.gameMode = 'online'; updateModeTabs(); });
+function updateModeTabs() {
+  var m = gameState.gameMode;
+  $('modeAI').classList.toggle('on', m === 'ai');
+  $('modeLocal').classList.toggle('on', m === 'local');
+  $('modeOnline').classList.toggle('on', m === 'online');
+}
+
+// ============ SCORING MODE ============
+function updateModeUI() {
+  var m = gameState.scoringMode;
+  $('modeAlt').classList.toggle('on', m === 'alternate');
+  $('modeKeep').classList.toggle('on', m === 'keep');
+  $('modeHint').textContent = m === 'alternate' ? '进球后交换球权' : '进球方继续进攻';
+}
+$('modeAlt').addEventListener('click', function() { gameState.scoringMode = 'alternate'; updateModeUI(); });
+$('modeKeep').addEventListener('click', function() { gameState.scoringMode = 'keep'; updateModeUI(); });
+
+// ============ TIME SELECTION ============
+var timeBtns = document.querySelectorAll('.time-btn');
+for (var i = 0; i < timeBtns.length; i++) {
+  timeBtns[i].addEventListener('click', function() {
+    var dur = parseInt(this.getAttribute('data-dur')) || 120;
+    if (dur === 0) {
+      dur = parseInt($('customTime').value) || 120;
+      dur = Math.max(30, Math.min(600, dur));
+      $('customTime').value = dur;
+    }
+    gameState.duration = dur;
+    startGame();
+  });
+}
+
+// ============ START GAME ============
+function startGame() {
+  if (!selP1 || !selP2) { alert('请先选择球员'); return; }
+  p1 = selP1; p2 = selP2;
+
+  if (gameState.gameMode === 'online') {
+    // Online mode - try WebSocket connection
+    showScreen(null);
+    var wsHost = prompt('输入服务器地址 (格式: IP:端口):', '10.32.17.144:3456');
+    if (!wsHost) { showScreen('setupOverlay'); return; }
+    connectOnline(wsHost);
+    return;
+  }
+
+  // AI or local mode
+  showScreen(null);
+  gameState.started = true;
+  gameState.isAI = gameState.gameMode === 'ai';
+
+  engine = new GameEngine(canvas, ctx, window.innerWidth, window.innerHeight, {
+    gameDuration: gameState.duration,
+    scoringMode: gameState.scoringMode
+  });
+  engine.setPlayers(p1, p2);
+  engine.scoringMode = gameState.scoringMode;
+  if (gameState.isAI) {
+    engine._aiMode = true; // AI controls defense
+  }
+
+  $('p1name').textContent = p1.name;
+  $('p1name').style.color = p1.teamColor;
+  $('p2name').textContent = p2.name;
+  $('p2name').style.color = p2.teamColor;
+  $('score0').textContent = '0';
+  $('score1').textContent = '0';
+  $('gameTimer').textContent = formatTime(gameState.duration);
+
+  lastFrame = performance.now();
+  if (gameLoop) cancelAnimationFrame(gameLoop);
+  gameLoop = requestAnimationFrame(tick);
+}
+
+function formatTime(sec) {
+  var m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+// ============ GAME LOOP ============
+function tick(now) {
+  if (!engine || !gameState.started) { gameLoop = requestAnimationFrame(tick); return; }
+  try {
+    var dt = now - lastFrame;
+    lastFrame = now;
+    if (dt > 50) dt = 33;
+    engine.update(dt);
+    engine.render();
+    syncUI();
+    if (engine.gameOver && !engine._uiEnded) {
+      engine._uiEnded = true;
+      showGameOver();
+    }
+  } catch(e) {
+    console.error('Game error:', e);
+    var ld = document.getElementById('loading');
+    if (ld) { ld.textContent = '出错了: ' + e.message; ld.style.display = 'block'; }
+  }
+  gameLoop = requestAnimationFrame(tick);
+}
+
+function syncUI() {
+  var s = engine.getState();
+  $('score0').textContent = s.score[0];
+  $('score1').textContent = s.score[1];
+  $('shotClock').textContent = s.shotClock + 's';
+  $('gameTimer').textContent = formatTime(s.gameTime);
+
+  if (s.shooting && !engine.shotReleased) {
+    meter.classList.add('show');
+    var pct = Math.floor(s.shotPower * 100);
+    meterFill.style.width = pct + '%';
+    meterMark.style.left = pct + '%';
+    meterGreen.style.left = Math.floor(s.chargeZoneLo * 100) + '%';
+    meterGreen.style.width = Math.floor((s.chargeZoneHi - s.chargeZoneLo) * 100) + '%';
+  } else {
+    meter.classList.remove('show');
+  }
+
+  if (s.messageText) {
+    msgBox.classList.add('show');
+    msgText.textContent = s.messageText;
+  } else {
+    msgBox.classList.remove('show');
+  }
+
+  var bl = s.ballLoose;
+  btnShoot.classList.toggle('hidden', bl);
+  btnRebound.classList.toggle('hidden', !bl);
+  $('btnShootLabel').textContent = s.shooting ? '松手！' : '按住投篮';
+}
+
+function showGameOver() {
+  var s = engine.getState(), w = s.winner;
+  $('winText').textContent = (w === 0 ? p1.name : w === 1 ? p2.name : '') + ' 获胜！';
+  $('finalScore').textContent = s.score[0] + ' - ' + s.score[1];
+  $('stat1').textContent = p1.name + ': ' + (s.stats.p1.pts || 0) + '分 ' + (s.stats.p1.reb || 0) + '板 ' + (s.stats.p1.blk || 0) + '帽 ' + (s.stats.p1.stl || 0) + '断';
+  $('stat2').textContent = p2.name + ': ' + (s.stats.p2.pts || 0) + '分 ' + (s.stats.p2.reb || 0) + '板 ' + (s.stats.p2.blk || 0) + '帽 ' + (s.stats.p2.stl || 0) + '断';
+  showScreen('gameOverOverlay');
+}
+
+// ============ TOUCH JOYSTICK ============
+var joyOn = false, joyRect = null;
+
+function getJoyPos(touch) {
+  if (!joyRect) {
+    var r = joyBase.getBoundingClientRect();
+    joyRect = { cx: r.left + r.width / 2, cy: r.top + r.height / 2, mr: r.width / 2 };
+  }
+  var dx = touch.clientX - joyRect.cx, dy = touch.clientY - joyRect.cy;
+  var d = Math.sqrt(dx * dx + dy * dy);
+  if (d > joyRect.mr) { dx = dx / d * joyRect.mr; dy = dy / d * joyRect.mr; }
+  return { x: dx / joyRect.mr, y: dy / joyRect.mr };
+}
+
+joyArea.addEventListener('touchstart', function(e) {
+  e.preventDefault(); joyOn = true;
+  var p = getJoyPos(e.touches[0]);
+  joyDot.style.left = (p.x * 50 + 50) + '%';
+  joyDot.style.top = (p.y * 50 + 50) + '%';
+  if (engine) engine.setOffMove(p.x, p.y);
+});
+joyArea.addEventListener('touchmove', function(e) {
+  e.preventDefault();
+  if (!joyOn) return;
+  var p = getJoyPos(e.touches[0]);
+  joyDot.style.left = (p.x * 50 + 50) + '%';
+  joyDot.style.top = (p.y * 50 + 50) + '%';
+  if (engine) engine.setOffMove(p.x, p.y);
+});
+joyArea.addEventListener('touchend', function(e) {
+  e.preventDefault(); joyOn = false;
+  joyDot.style.left = '50%'; joyDot.style.top = '50%';
+  joyRect = null;
+  if (engine) engine.setOffMove(0, 0);
+});
+joyArea.addEventListener('touchcancel', function() {
+  joyOn = false; joyDot.style.left = '50%'; joyDot.style.top = '50%';
+  joyRect = null;
+  if (engine) engine.setOffMove(0, 0);
+});
+
+// ============ ACTION BUTTONS ============
+btnShoot.addEventListener('touchstart', function(e) {
+  e.preventDefault(); btnShoot.classList.add('on');
+  if (engine) engine.startShoot();
+});
+btnShoot.addEventListener('touchend', function(e) {
+  e.preventDefault(); btnShoot.classList.remove('on');
+  if (engine) engine.releaseShoot();
+});
+btnShoot.addEventListener('touchcancel', function() {
+  btnShoot.classList.remove('on');
+  if (engine) engine.releaseShoot();
+});
+
+btnRebound.addEventListener('touchstart', function(e) {
+  e.preventDefault(); btnRebound.classList.add('on');
+  if (engine) engine.attemptRebound();
+  setTimeout(function() { btnRebound.classList.remove('on'); }, 200);
+});
+
+function bindAction(el, action) {
+  el.addEventListener('touchstart', function(e) {
+    e.preventDefault(); el.classList.add('on');
+    if (engine) engine[action]();
+    setTimeout(function() { el.classList.remove('on'); }, 300);
+  });
+}
+bindAction(btnDrive, 'attemptDrive');
+bindAction(btnSteal, 'attemptSteal');
+bindAction(btnBlock, 'attemptBlock');
+
+// Desktop mouse support
+btnShoot.addEventListener('mousedown', function(e) { e.preventDefault(); btnShoot.classList.add('on'); if (engine) engine.startShoot(); });
+btnShoot.addEventListener('mouseup', function(e) { e.preventDefault(); btnShoot.classList.remove('on'); if (engine) engine.releaseShoot(); });
+btnRebound.addEventListener('mousedown', function(e) { e.preventDefault(); btnRebound.classList.add('on'); if (engine) engine.attemptRebound(); setTimeout(function() { btnRebound.classList.remove('on'); }, 200); });
+btnDrive.addEventListener('mousedown', function(e) { e.preventDefault(); btnDrive.classList.add('on'); if (engine) engine.attemptDrive(); setTimeout(function() { btnDrive.classList.remove('on'); }, 300); });
+btnSteal.addEventListener('mousedown', function(e) { e.preventDefault(); btnSteal.classList.add('on'); if (engine) engine.attemptSteal(); setTimeout(function() { btnSteal.classList.remove('on'); }, 300); });
+btnBlock.addEventListener('mousedown', function(e) { e.preventDefault(); btnBlock.classList.add('on'); if (engine) engine.attemptBlock(); setTimeout(function() { btnBlock.classList.remove('on'); }, 300); });
+
+// ============ GAME OVER BUTTONS ============
+$('btnRematch').addEventListener('click', function() {
+  engine._uiEnded = false;
+  gameState.started = false;
+  gameOverOverlay.classList.add('hidden');
+  startGame();
+});
+$('btnNewGame').addEventListener('click', function() {
+  engine._uiEnded = false;
+  gameState.started = false;
+  gameOverOverlay.classList.add('hidden');
+  showScreen('setupOverlay');
+});
+
+// ============ PREVENT SCROLL ============
+document.addEventListener('touchmove', function(e) {
+  if (e.target.closest && e.target.closest('.ov-box')) return;
+  e.preventDefault();
+}, { passive: false });
+
+// ============ INIT ============
+document.addEventListener('DOMContentLoaded', function() {
+  initCanvas();
+  showScreen('setupOverlay');
+  updateModeUI();
+  var ld = document.getElementById('loading');
+  if (ld) ld.style.display = 'none';
+  console.log('Game initialized successfully');
+});
+// Fallback: if DOM already loaded
+if (document.readyState === 'interactive' || document.readyState === 'complete') {
+  initCanvas();
+  showScreen('setupOverlay');
+  updateModeUI();
+  var ld2 = document.getElementById('loading');
+  if (ld2) ld2.style.display = 'none';
+}
+</script></body></html>
