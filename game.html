@@ -1,10 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>CBA 篮球1v1</title>
-<style>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>CBA篮球1v1</title><style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
 #gc{position:absolute;top:0;left:0;width:100%;height:100%}
@@ -77,9 +71,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
 
 .hidden{display:none!important}
 #rotatePrompt{display:none}
-</style>
-</head>
-<body>
+#preload{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:linear-gradient(135deg,#0a0a14,#1a1030,#0d1525);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
+#preload .icon{font-size:60px;animation:pb 0.6s infinite alternate}
+@keyframes pb{from{transform:translateY(0)}to{transform:translateY(-15px)}}
+#preload h1{font-size:26px;font-weight:900;color:#ffd700;margin:10px 0 6px}
+#preload .msg{font-size:14px;color:rgba(255,255,255,0.5)}
+</style></head><body>
+<div id="preload"><div class="icon">🏀</div><h1>CBA 篮球1v1</h1><div class="msg">正在准备球场...</div></div>
 <script>
 // Force landscape if in portrait on mobile
 (function(){
@@ -115,6 +113,70 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
 </div>
 <div id="meter"><div class="meter-bg"><div class="meter-green" id="meterGreen"></div><div class="meter-fill" id="meterFill"></div><div class="meter-mark" id="meterMark"></div></div><span class="meter-txt">松手投篮！</span></div>
 <div id="msg"><span id="msgText"></span></div>
+<div class="joy-area" id="joyArea"><div class="joy-base" id="joyBase"><div class="joy-dot" id="joyDot" style="left:50%;top:50%"></div></div><span class="joy-label">移动</span></div>
+<div class="act-area" id="actArea">
+  <div class="act-btn big shoot-btn" id="btnShoot"><span class="ab-ico">🏀</span><span class="ab-txt" id="btnShootLabel">按住投篮</span></div>
+  <div class="act-btn big reb-btn hidden" id="btnRebound"><span class="ab-ico">🏀</span><span class="ab-txt">捡球</span></div>
+  <div class="act-row">
+    <div class="act-btn" id="btnDrive"><span class="ab-ico">⚡</span><span class="ab-txt">突破</span></div>
+    <div class="act-btn" id="btnSteal"><span class="ab-ico">✋</span><span class="ab-txt">抢断</span></div>
+    <div class="act-btn" id="btnBlock"><span class="ab-ico">🧱</span><span class="ab-txt">盖帽</span></div>
+  </div>
+</div>
+<!-- Rotation prompt -->
+<div class="overlay" id="rotatePrompt"><div class="ov-box">
+  <span class="ov-title" style="font-size:40px">📱↔️</span>
+  <span class="ov-title">请横屏使用</span>
+  <span style="color:#aaa;font-size:14px">将手机横过来体验最佳游戏</span>
+</div></div>
+
+<div class="overlay" id="setupOverlay"><div class="ov-box" id="setupBox">
+  <span class="ov-title">选择球员</span>
+  <span class="ov-label">游戏模式</span>
+  <div class="mode-opts" id="modeSelect">
+    <div class="mode-btn on" data-mode="ai" id="modeAI">🏀 单挑</div>
+    <div class="mode-btn" data-mode="3pt" id="mode3pt">🎯 三分</div>
+    <div class="mode-btn" data-mode="local" id="modeLocal">👥 双人</div>
+    <div class="mode-btn" data-mode="online" id="modeOnline">🌐 联机</div>
+  </div>
+  <span class="ov-label">进攻方球队</span>
+  <div class="team-tabs" id="teamTabs1"></div>
+  <div class="player-grid" id="playerGrid"></div>
+  <div class="player-vs">VS</div>
+  <span class="ov-label">防守方球队</span>
+  <div class="team-tabs" id="teamTabs2"></div>
+  <div class="player-grid" id="playerGrid2"></div>
+  <span class="ov-label">比赛时长</span>
+  <button class="time-btn" data-dur="60">1 分钟</button>
+  <button class="time-btn" data-dur="120">2 分钟</button>
+  <button class="time-btn" data-dur="180">3 分钟</button>
+  <button class="time-btn" data-dur="300">5 分钟</button>
+  <input type="number" id="customTime" placeholder="自定义(秒)" min="30" max="600" step="30" style="display:block;width:100%;height:48px;margin:6px 0;border-radius:24px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;text-align:center;font-size:16px;padding:0 16px">
+  <button class="time-btn" data-dur="0" style="background:rgba(0,200,255,0.12);border-color:rgba(0,200,255,0.3);color:#0cf">使用自定义时长</button>
+  <span class="ov-label">发球模式</span>
+  <div class="mode-opts"><div class="mode-btn on" data-mode="alternate" id="modeAlt">换发</div><div class="mode-btn" data-mode="keep" id="modeKeep">连发</div></div>
+  <span class="mode-hint" id="modeHint">进球后交换球权</span>
+</div></div>
+<div class="overlay hidden" id="gameOverOverlay"><div class="ov-box">
+  <span class="ov-title" id="winText"></span>
+  <span class="ov-score" id="finalScore"></span>
+  <span class="ov-stat" id="stat1"></span>
+  <span class="ov-stat" id="stat2"></span>
+  <button class="ov-btn" id="btnRematch">再来一局</button>
+  <button class="ov-btn2" id="btnNewGame">重新选择</button>
+</div></div>
+<div class="overlay hidden" id="gameOverOverlay"><div class="ov-box"><span class="ov-title" id="winText"></span><span class="ov-score" id="finalScore"></span><span class="ov-stat" id="stat1"></span><span class="ov-stat" id="stat2"></span><button class="ov-btn" id="btnRematch">再来一局</button><button class="ov-btn2" id="btnNewGame">重新选择</button></div></div>
+<script>
+// Hide preloader - runs FIRST, before any game code
+(function(){var p=document.getElementById('preload');if(p)p.style.display='none'})();
+
+// Force landscape
+(function(){
+  function co(){var w=window.innerWidth,h=window.innerHeight;if(w<h&&w<768){document.body.style.transform='rotate(90deg)';document.body.style.transformOrigin='center center';document.body.style.width=h+'px';document.body.style.height=w+'px';document.body.style.position='fixed';document.body.style.top='0';document.body.style.left='0'}}
+  window.addEventListener('resize',co);window.addEventListener('orientationchange',function(){setTimeout(co,300)});setTimeout(co,100)
+  try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(function(){})}catch(e){}
+})();
+</script>
 <script>
 // CBA 2024-2025赛季 全部20支球队球员数据
 var CBA_TEAMS = [
