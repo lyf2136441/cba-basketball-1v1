@@ -236,18 +236,21 @@ GameEngine.prototype.update = function(dt) {
       this.ball.has = false; this.ballInAir = false
       if (this._jumpBallTimer <= 0) {
         this._jumpBallPhase = 'toss'
-        this.ball.vy = -7
+        this.ball.vy = -6.5
+        this.ball.vx = (Math.random() - 0.5) * 3
         this.ballInAir = true
       }
     } else if (this._jumpBallPhase === 'toss') {
-      // 球从裁判手中向上飞出
       this.ball.vy += GRAVITY * (dt / 16) * 0.75
       this.ball.y += this.ball.vy * (dt / 16)
+      this.ball.x += this.ball.vx * (dt / 16)
+      if (this.ball.x < this._s(10)) { this.ball.x = this._s(10); this.ball.vx = Math.abs(this.ball.vx) * 0.5 }
+      if (this.ball.x > this._s(990)) { this.ball.x = this._s(990); this.ball.vx = -Math.abs(this.ball.vx) * 0.5 }
       if (this.ball.vy >= 0) this._jumpBallPhase = 'contest'
     } else if (this._jumpBallPhase === 'contest') {
-      // 球下落，双方争抢
       this.ball.vy += GRAVITY * (dt / 16) * 0.75
       this.ball.y += this.ball.vy * (dt / 16)
+      this.ball.x += this.ball.vx * (dt / 16)
       if (this.ball.y > this._s(350)) {
         var dOff = this._dist(this.off, this.ball)
         var dDef = this._dist(this.def, this.ball)
@@ -261,7 +264,7 @@ GameEngine.prototype.update = function(dt) {
       }
     }
     this._move(dt)
-    return
+    // Fall through - game timer and other updates continue
   }
 
   // Game timer
@@ -1037,6 +1040,20 @@ GameEngine.prototype._spawnParticles = function(x, y, color, count) {
 
 GameEngine.prototype.attemptDrive = function() {
   if (!this.ball.has || this.shooting || this.driveAnim > 0 || this.offEnergy < 30) { if (this.offEnergy < 30) this._say('体力不足'); return }
+  // Check for dunk/layup opportunity
+  var dist2Rim = Math.abs(this.off.x - this._s(RIM_X))
+  var offP = this.poss === 0 ? this.p1 : this.p2
+  var canDunk = dist2Rim < this._s(170) && offP && offP.jumping >= 70
+  var canLayup = dist2Rim < this._s(170)
+
+  if (canDunk) {
+    this._doDunk(offP)
+    return
+  } else if (canLayup) {
+    this._doLayup(offP)
+    return
+  }
+
   this.driveAnim = 600; this.offEnergy -= 30; this.stamina = Math.max(0, this.stamina - 12); this._say('突破！')
   this._spawnParticles(this.off.x, this.off.y, '#0088ff', 10)
   var d = this._defDist()
@@ -1044,6 +1061,64 @@ GameEngine.prototype.attemptDrive = function() {
     var c = 0.35 + (this._offSp / 5) * 0.35 - this._defDf / 99 * 0.25
     if (Math.random() > c) { this._say('突破被阻！'); this.driveAnim = 200; var that = this; setTimeout(function() { that._chg('进攻犯规！') }, 300) }
   }
+}
+
+GameEngine.prototype._doDunk = function(player) {
+  this.driveAnim = 700; this.offEnergy -= 35; this.stamina = Math.max(0, this.stamina - 15)
+  this._triggerJump('dunk')
+  this._say('🏀 扣篮！')
+  this._sfx('score')
+  var that = this
+  setTimeout(function() {
+    var made = Math.random() < 0.95
+    that._finishDunkLayup(made, 2, player && player.jumping >= 85 ? '暴扣！！' : '扣篮')
+  }, 480)
+}
+
+GameEngine.prototype._doLayup = function(player) {
+  this.driveAnim = 550; this.offEnergy -= 22; this.stamina = Math.max(0, this.stamina - 10)
+  this._triggerJump('layup')
+  this._say('上篮！')
+  var that = this
+  setTimeout(function() {
+    var made = Math.random() < 0.88
+    that._finishDunkLayup(made, 2, '上篮')
+  }, 400)
+}
+
+GameEngine.prototype._finishDunkLayup = function(made, pts, label) {
+  this.ball.has = false; this.ballInAir = true; this._grabCooldown = 250
+  this.ball.x = this._s(RIM_X - 3); this.ball.y = this._s(RIM_Y + 3)
+  this.ball.vx = 0; this.ball.vy = 2
+  this.shotClockTimer = 0; this.shotResult = { made: made, pts: pts, timing: label }
+  this.scoredAnim = 1100; this._screenShake = 200
+  this._spawnParticles(this._s(RIM_X), this._s(RIM_Y + 30), '#ffd700', 28)
+  this._scorePopups.push({ x: this._s(RIM_X), y: this._s(RIM_Y), text: '+' + pts, life: 1200, maxLife: 1200 })
+  if (made) {
+    this.score[this.poss] += pts
+    if (this.poss === 0) this.stats.p1.pts += pts; else this.stats.p2.pts += pts
+    this._say(label + '！+' + pts + '分')
+    setTimeout(this._sfx.bind(this, 'crowd'), 300)
+  } else {
+    this._say('失手！')
+    this._sfx('bounce')
+    this.ball.x = this._s(RIM_X) + (Math.random() - 0.5) * this._s(80)
+    this.ball.vy = -(Math.random() * 3 + 2)
+    this.ball.vx = (Math.random() - 0.5) * 5
+    this.ballInAir = true; this.shotResult = null
+  }
+  var that = this
+  setTimeout(function() {
+    that.ballInAir = false; that.ball.has = false
+    that.ball.x = that._s(RIM_X); that.ball.y = that._s(RIM_Y + 25)
+    that.ball.vx = 0; that.ball.vy = 0; that._ballRimCooldown = 2000
+    setTimeout(function() {
+      if (that.scoringMode !== 'keep') { that.poss = that.poss === 0 ? 1 : 0 }
+      that._resetPos(); that.shotClockTimer = 0; that.shotResult = null
+      that.ballInAir = false; that.ballLoose = false
+      that.stealAnim = 0; that.blockAnim = 0; that.driveAnim = 0; that.scoredAnim = 0
+    }, 1100)
+  }, 600)
 }
 
 GameEngine.prototype.attemptSteal = function() {
@@ -1998,90 +2073,3 @@ GameEngine.prototype._drawUI = function(ctx) {
   ctx.fillRect(this._s(8), sbY, sbW * sc2, sbH)
 }
 
-
-// ============ SOUND SYSTEM ============
-GameEngine.prototype._initSound = function() {
-  try { this._audioCtx = new (window.AudioContext || window.webkitAudioContext)() } catch(e) { this._audioCtx = null }
-}
-GameEngine.prototype._playBeep = function(freq, dur, type, vol, glide) {
-  if (!this._audioCtx) return
-  var ctx = this._audioCtx, o = ctx.createOscillator(), g = ctx.createGain()
-  o.type = type || 'sine'; o.frequency.value = freq || 440
-  if (glide) o.frequency.linearRampToValueAtTime(freq * (glide > 0 ? 0.5 : 1.5), ctx.currentTime + dur)
-  g.gain.setValueAtTime(vol || 0.15, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
-  o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + dur)
-}
-GameEngine.prototype._sfx = function(name) {
-  if (!this._audioCtx) return
-  try {
-    if (name === 'swish') { this._playBeep(800, 0.25, 'sine', 0.12); setTimeout(this._playBeep.bind(this, 1200, 0.2, 'sine', 0.08), 100) }
-    else if (name === 'bounce') { this._playBeep(200, 0.15, 'triangle', 0.1); setTimeout(this._playBeep.bind(this, 150, 0.12, 'triangle', 0.08), 50) }
-    else if (name === 'buzzer') { this._playBeep(220, 0.5, 'square', 0.1); setTimeout(this._playBeep.bind(this, 180, 0.4, 'square', 0.08), 200) }
-    else if (name === 'block') { this._playBeep(100, 0.3, 'sawtooth', 0.12) }
-    else if (name === 'steal') { this._playBeep(600, 0.15, 'square', 0.08, 1) }
-    else if (name === 'score') { this._playBeep(523, 0.15, 'sine', 0.1); setTimeout(this._playBeep.bind(this, 659, 0.12, 'sine', 0.1), 100); setTimeout(this._playBeep.bind(this, 784, 0.2, 'sine', 0.12), 200) }
-    else if (name === 'crowd') { for (var i = 0; i < 8; i++) { var f = 150 + Math.random() * 400; setTimeout(this._playBeep.bind(this, f, 0.3 + Math.random() * 0.3, 'triangle', 0.04), i * 40) } }
-  } catch(e) {}
-}
-
-// ============ STREAK SYSTEM ============
-GameEngine.prototype._updateStreak = function(made) {
-  if (made) {
-    this._streakCount++
-    if (this._streakCount === 2) this._sayCommentary('手感来了！')
-    else if (this._streakCount === 3) this._sayCommentary('火力全开！')
-    else if (this._streakCount >= 4) this._sayCommentary('不可阻挡！！')
-  } else { this._streakCount = 0 }
-}
-
-// ============ INIT PATCH ============
-var _origInit = GameEngine.prototype._init
-GameEngine.prototype._init = function() {
-  _origInit.call(this)
-  this._streakCount = 0
-  this._initSound()
-}
-
-// Add sound to key moments
-var _origScore = GameEngine.prototype._score
-GameEngine.prototype._score = function() {
-  var made = this.shotResult && this.shotResult.made
-  if (made) { this._sfx('score'); setTimeout(this._sfx.bind(this, 'crowd'), 300) }
-  else { this._sfx('bounce') }
-  this._updateStreak(made)
-  return _origScore.call(this)
-}
-
-var _origAttemptBlock = GameEngine.prototype.attemptBlock
-GameEngine.prototype.attemptBlock = function() {
-  var ret = _origAttemptBlock.call(this)
-  if (this.blockAnim > 0 && this._dist(this.def, this.ball) < this._s(80)) this._sfx('block')
-  return ret
-}
-
-var _origAttemptSteal = GameEngine.prototype.attemptSteal
-GameEngine.prototype.attemptSteal = function() {
-  var ret = _origAttemptSteal.call(this)
-  if (this.stealAnim > 0) this._sfx('steal')
-  return ret
-}
-
-// Add energy bar to HUD rendering
-var _origDrawUI = GameEngine.prototype._drawUI
-GameEngine.prototype._drawUI = function(ctx) {
-  _origDrawUI.call(this, ctx)
-  // Energy bars
-  var barW = this._s(50), barH = this._s(4), barX = this._s(8), barY = this.h - this._s(18)
-  // Offense energy
-  var oe = this.offEnergy / 100
-  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(barX, barY, barW, barH)
-  ctx.fillStyle = oe > 0.3 ? '#0c6' : '#f44'; ctx.fillRect(barX, barY, barW * oe, barH)
-  // Defense energy  
-  var de = this.defEnergy / 100
-  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(this.w - barX - barW, barY, barW, barH)
-  ctx.fillStyle = de > 0.3 ? '#0c6' : '#f44'; ctx.fillRect(this.w - barX - barW, barY, barW * de, barH)
-  // Labels
-  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = Math.floor(this._s(9)) + 'px sans-serif'
-  ctx.textAlign = 'left'; ctx.fillText('体力', barX, barY - this._s(2))
-  ctx.textAlign = 'right'; ctx.fillText('体力', this.w - barX, barY - this._s(2))
-}
