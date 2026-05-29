@@ -115,7 +115,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
     <div class="mode-btn" data-mode="online" id="modeOnline">🌐 联机</div>
   </div>
   <span class="ov-label">进攻方球队</span>
-  <div class="team-tabs" id="teamTabs1"></div>
 <script>
 // CBA 2024-2025赛季 全部20支球队球员数据
 var CBA_TEAMS = [
@@ -320,7 +319,7 @@ function getPlayerById(id){
 
 function getTeams(){return CBA_TEAMS.map(function(t){return{id:t.id,name:t.name,abbr:t.abbr,color:t.color,count:t.players.length}})}
 function getPlayersByTeam(tid){for(var i=0;i<CBA_TEAMS.length;i++){if(CBA_TEAMS[i].id===tid){var t=CBA_TEAMS[i];return t.players.map(function(p){p.teamId=t.id;p.teamName=t.name;p.teamAbbr=t.abbr;p.teamColor=t.color;return p})}}return[]}
-
+;
 // CBA Basketball 1v1 - Web Version
 // Players loaded from players-data.js
 
@@ -2412,7 +2411,7 @@ GameEngine.prototype._drawUI = function(ctx) {
   ctx.fillRect(this._s(8), sbY, sbW * sc2, sbH)
 }
 
-
+;
 
 // ============ WEB GAME CONTROLLER ============
 var canvas, ctx, engine, p1, p2, gameLoop, lastFrame;
@@ -2772,20 +2771,23 @@ document.addEventListener('touchmove', function(e) {
 }, { passive: false });
 
 // ============ INIT ============
-document.addEventListener('DOMContentLoaded', function() {
-  initCanvas();
-  showScreen('setupOverlay');
-  updateModeUI();
-  var ld = document.getElementById('loading');
-  if (ld) ld.style.display = 'none';
-  console.log('Game initialized successfully');
-});
-// Fallback: if DOM already loaded
-if (document.readyState === 'interactive' || document.readyState === 'complete') {
-  initCanvas();
-  showScreen('setupOverlay');
-  updateModeUI();
-  var ld2 = document.getElementById('loading');
-  if (ld2) ld2.style.display = 'none';
+function hideLoading() {
+  var x = document.getElementById('loading');
+  if (x) { x.style.display = 'none'; x.parentNode && x.parentNode.removeChild(x); }
 }
+function initGame() {
+  try {
+    initCanvas();
+    showScreen('setupOverlay');
+    updateModeUI();
+  } catch(e) { console.error(e); }
+  hideLoading();
+}
+// Run immediately (script at end of body, DOM already parsed)
+initGame();
+// Also on DOMContentLoaded just in case
+document.addEventListener('DOMContentLoaded', initGame);
+// Final cleanup after a short delay
+setTimeout(hideLoading, 500);
+setTimeout(hideLoading, 1500);
 </script></body></html>
