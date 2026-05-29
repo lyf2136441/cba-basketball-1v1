@@ -1,4 +1,10 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>CBA篮球1v1</title><style>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>CBA 篮球1v1</title>
+<style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
 #gc{position:absolute;top:0;left:0;width:100%;height:100%}
@@ -71,40 +77,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
 
 .hidden{display:none!important}
 #rotatePrompt{display:none}
-#preload{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:linear-gradient(135deg,#0a0a14,#1a1030,#0d1525);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
-#preload .icon{font-size:60px;animation:pb 0.6s infinite alternate}
-@keyframes pb{from{transform:translateY(0)}to{transform:translateY(-15px)}}
-#preload h1{font-size:26px;font-weight:900;color:#ffd700;margin:10px 0 6px}
-#preload .msg{font-size:14px;color:rgba(255,255,255,0.5)}
-</style></head><body>
-<div id="preload"><div class="icon">🏀</div><h1>CBA 篮球1v1</h1><div class="msg">正在准备球场...</div></div>
-<script>
-// Force landscape if in portrait on mobile
-(function(){
-  function checkOrient(){
-    var w=window.innerWidth,h=window.innerHeight;
-    var isPortrait=w<h&&w<768;
-    if(isPortrait){
-      document.body.style.transform='rotate(90deg)';
-      document.body.style.transformOrigin='center center';
-      document.body.style.width=h+'px';
-      document.body.style.height=w+'px';
-      document.body.style.position='fixed';
-      document.body.style.top='0';document.body.style.left='0';
-      document.body.style.overflow='hidden';
-      // Resize canvas for rotated view
-      setTimeout(function(){
-        var c=document.getElementById('gc');if(c){c.width=h*window.devicePixelRatio;c.height=w*window.devicePixelRatio;c.style.width=h+'px';c.style.height=w+'px'}
-      },500)
-    }
-  }
-  window.addEventListener('resize',checkOrient);
-  window.addEventListener('orientationchange',function(){setTimeout(checkOrient,300)});
-  setTimeout(checkOrient,100);
-  // Try Screen Orientation API
-  try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){}
-})();
-</script>
+</style>
+</head>
+<body>
 <canvas id="gc"></canvas>
 <div id="hud">
   <div class="hud-side"><span class="hud-name" id="p1name"></span><span class="hud-score" id="score0">0</span></div>
@@ -165,18 +140,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
   <button class="ov-btn" id="btnRematch">再来一局</button>
   <button class="ov-btn2" id="btnNewGame">重新选择</button>
 </div></div>
-<div class="overlay hidden" id="gameOverOverlay"><div class="ov-box"><span class="ov-title" id="winText"></span><span class="ov-score" id="finalScore"></span><span class="ov-stat" id="stat1"></span><span class="ov-stat" id="stat2"></span><button class="ov-btn" id="btnRematch">再来一局</button><button class="ov-btn2" id="btnNewGame">重新选择</button></div></div>
-<script>
-// Hide preloader - runs FIRST, before any game code
-(function(){var p=document.getElementById('preload');if(p)p.style.display='none'})();
-
-// Force landscape
-(function(){
-  function co(){var w=window.innerWidth,h=window.innerHeight;if(w<h&&w<768){document.body.style.transform='rotate(90deg)';document.body.style.transformOrigin='center center';document.body.style.width=h+'px';document.body.style.height=w+'px';document.body.style.position='fixed';document.body.style.top='0';document.body.style.left='0'}}
-  window.addEventListener('resize',co);window.addEventListener('orientationchange',function(){setTimeout(co,300)});setTimeout(co,100)
-  try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(function(){})}catch(e){}
-})();
-</script>
 <script>
 // CBA 2024-2025赛季 全部20支球队球员数据
 var CBA_TEAMS = [
@@ -381,7 +344,8 @@ function getPlayerById(id){
 
 function getTeams(){return CBA_TEAMS.map(function(t){return{id:t.id,name:t.name,abbr:t.abbr,color:t.color,count:t.players.length}})}
 function getPlayersByTeam(tid){for(var i=0;i<CBA_TEAMS.length;i++){if(CBA_TEAMS[i].id===tid){var t=CBA_TEAMS[i];return t.players.map(function(p){p.teamId=t.id;p.teamName=t.name;p.teamAbbr=t.abbr;p.teamColor=t.color;return p})}}return[]}
-;
+</script>
+<script>
 // CBA Basketball 1v1 - Web Version
 // Players loaded from players-data.js
 
@@ -2473,7 +2437,8 @@ GameEngine.prototype._drawUI = function(ctx) {
   ctx.fillRect(this._s(8), sbY, sbW * sc2, sbH)
 }
 
-;
+</script>
+<script>
 
 // ============ WEB GAME CONTROLLER ============
 var canvas, ctx, engine, p1, p2, gameLoop, lastFrame;
@@ -2937,4 +2902,5 @@ document.addEventListener('touchmove', function(e) {
 initCanvas();
 showScreen('setupOverlay');
 updateModeUI();
-</script></body></html>
+</script>
+</body></html>
